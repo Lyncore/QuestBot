@@ -3,6 +3,7 @@ from telebot import TeleBot
 from telebot.types import Message
 
 from checks import check_admin
+from locale import TaskMessages, CommonMessages
 from models import Task
 
 
@@ -12,17 +13,17 @@ def register_task_setting_commands(bot: TeleBot, session: Session):
     def create_task(message: Message):
         if not check_admin(bot, message, session):
             return
-        msg = bot.reply_to(message, '📝 Введите название задания:')
+        msg = bot.reply_to(message, TaskMessages.ENTER_TASK_NAME)
         bot.register_next_step_handler(msg, process_task_name)
 
     def process_task_name(message: Message):
         task = Task(task_name=message.text)
-        msg = bot.reply_to(message, '📝 Введите описание задания:')
+        msg = bot.reply_to(message, TaskMessages.ENTER_DESCRIPTION)
         bot.register_next_step_handler(msg, process_task_description, task)
 
     def process_task_description(message: Message, task: Task):
         task.description = message.text
-        msg = bot.reply_to(message, '🖼 Отправьте фото, GIF или стикер (или /skip):')
+        msg = bot.reply_to(message, TaskMessages.ENTER_MEDIA)
         bot.register_next_step_handler(msg, process_task_media, task)
 
     def process_task_media(message: Message, task: Task):
@@ -33,14 +34,14 @@ def register_task_setting_commands(bot: TeleBot, session: Session):
         elif message.animation:
             task.animation = message.animation.file_id
 
-        msg = bot.reply_to(message, '🏠 Введите место прохождения задания:')
+        msg = bot.reply_to(message, TaskMessages.ENTER_LOCATION)
         bot.register_next_step_handler(msg, process_task_location, task)
 
     def process_task_location(message: Message, task: Task):
 
         task.location = message.text
 
-        msg = bot.reply_to(message, '🔑 Введите кодовое слово для задания:')
+        msg = bot.reply_to(message, TaskMessages.ENTER_CODE_WORD)
         bot.register_next_step_handler(msg, process_task_code, task)
 
     def process_task_code(message: Message, task: Task):
@@ -48,7 +49,7 @@ def register_task_setting_commands(bot: TeleBot, session: Session):
 
         session.add(task)
         session.commit()
-        bot.reply_to(message, '✅ Задание создано!')
+        bot.reply_to(message, TaskMessages.TASK_CREATED)
 
     @bot.message_handler(commands=['listtask'])
     def list_task(message: Message):
@@ -56,23 +57,26 @@ def register_task_setting_commands(bot: TeleBot, session: Session):
             return
         tasks = session.query(Task).all()
         if len(tasks) == 0:
-            bot.reply_to(message, 'Вы еще не добавили задания. Используйте /createtask 🥺')
+            bot.reply_to(message, TaskMessages.NO_TASKS)
         else:
-            msg = "Список заданий:\n"
+            msg = TaskMessages.LIST_TASKS_HEADER
             for task in tasks:
-                msg += \
-                    f'''
-*Задание #{task.id}:* {task.task_name}
-🖼Описание: {task.description}
-📸Фото: {'Есть' if task.photo else 'Нет'}
-🫡Стикер: {'Есть' if task.sticker else 'Нет'}
-🎁Гифка: {'Есть' if task.animation else 'Нет'}
-🏠Локация: {task.location}
-🔑Кодовое слово: {task.code_word}
-\n'''
+                msg += TaskMessages.TASK_ITEM_TEMPLATE.format(
+                    id=task.id,
+                    task_name=task.task_name,
+                    description=task.description,
+                    photo=CommonMessages.YES if task.photo else CommonMessages.NO,
+                    sticker=CommonMessages.YES if task.sticker else CommonMessages.NO,
+                    animation=CommonMessages.YES if task.animation else CommonMessages.NO,
+                    location=task.location,
+                    code_word=task.code_word
+                )
                 if len(task.chains) > 0:
-                    msg += 'Задание присвоено командам:\n'
+                    msg += TaskMessages.ASSIGNED_TEAMS_HEADER
                     for chain in task.chains:
-                        msg += f'*Команда "{chain.team.team_name}"*\n'
-                        msg += f'Задание #{chain.order + 1}\n'
+                        msg += TaskMessages.ASSIGNED_TEAMS_TEMPLATE.format(
+                            team_name=chain.team.team_name,
+                            task_chain_order=chain.order + 1
+                        )
+
             bot.reply_to(message, msg)

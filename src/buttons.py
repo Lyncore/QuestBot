@@ -2,6 +2,7 @@ from typing import Type
 
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from locale import CommonMessages, ButtonMessages
 from models import Task, Team
 
 
@@ -13,10 +14,13 @@ def render_team_buttons(
     markup = InlineKeyboardMarkup(row_width=1)
     for team in teams:
         markup.add(InlineKeyboardButton(
-            text=f'Команда "{team.team_name}" (код: {team.code_word})',
+            text=ButtonMessages.TEAM_BUTTON.format(
+                name=team.team_name,
+                code=team.code_word
+            ),
             callback_data=f'{callback_finish}_{team.id}'
         ))
-    markup.add(InlineKeyboardButton('❌ Отмена', callback_data=callback_cancel))
+    markup.add(InlineKeyboardButton(CommonMessages.CANCEL, callback_data=callback_cancel))
     return markup
 
 
@@ -29,7 +33,9 @@ def render_task_buttons(
 ):
     markup = InlineKeyboardMarkup(row_width=1)
     for task in tasks:
-        btn_text = f'{task.task_name[:20]}...'
+        btn_text = ButtonMessages.TASK_BUTTON.format(
+            name=task.task_name[:20]
+        )
         if task.id in selected_tasks:
             index = selected_tasks.index(task.id)
             btn_text += f' (#{index})'
@@ -38,7 +44,7 @@ def render_task_buttons(
             callback_data=f'{callback_select}_{task.id}'
         ))
     markup.row(
-        InlineKeyboardButton('✅ Завершить выбор', callback_data=callback_finish),
-        InlineKeyboardButton('❌ Отмена', callback_data=callback_cancel)
+        InlineKeyboardButton(CommonMessages.SELECT_FINISH, callback_data=callback_finish),
+        InlineKeyboardButton(CommonMessages.CANCEL, callback_data=callback_cancel)
     )
     return markup
