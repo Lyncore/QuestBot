@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, BigInteger
-from sqlalchemy.orm import sessionmaker, relationship, DeclarativeBase, Session
-import os
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, BigInteger
+from sqlalchemy.orm import relationship, DeclarativeBase
+
 
 class Base(DeclarativeBase): pass
 
@@ -45,12 +45,3 @@ class Chain(Base):
     order = Column(Integer, nullable=False)
     team = relationship("Team", back_populates="chains")
     task = relationship("Task", back_populates="chains")
-
-# Инициализация БД
-def init_session():
-    DATABASE_URL = os.getenv('DATABASE_URL')
-    print(DATABASE_URL)
-    engine = create_engine(DATABASE_URL)
-    Base.metadata.create_all(engine)
-    session = sessionmaker(bind=engine)
-    return session()

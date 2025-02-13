@@ -1,17 +1,17 @@
-from sqlalchemy.orm import Session
 from telebot import TeleBot
 from telebot.types import Message
 
 from checks import check_admin
+from database.dao import add_task, get_tasks
+from database.models import Task
 from locale import TaskMessages, CommonMessages
-from models import Task
 
 
-def register_task_setting_commands(bot: TeleBot, session: Session):
+def register_task_setting_commands(bot: TeleBot):
     # Создание задания (админ)
     @bot.message_handler(commands=['createtask'])
     def create_task(message: Message):
-        if not check_admin(bot, message, session):
+        if not check_admin(bot, message):
             return
         msg = bot.reply_to(message, TaskMessages.ENTER_TASK_NAME)
         bot.register_next_step_handler(msg, process_task_name)
@@ -47,15 +47,14 @@ def register_task_setting_commands(bot: TeleBot, session: Session):
     def process_task_code(message: Message, task: Task):
         task.code_word = message.text
 
-        session.add(task)
-        session.commit()
+        add_task(task)
         bot.reply_to(message, TaskMessages.TASK_CREATED)
 
     @bot.message_handler(commands=['listtask'])
     def list_task(message: Message):
-        if not check_admin(bot, message, session):
+        if not check_admin(bot, message):
             return
-        tasks = session.query(Task).all()
+        tasks = get_tasks()
         if len(tasks) == 0:
             bot.reply_to(message, TaskMessages.NO_TASKS)
         else:

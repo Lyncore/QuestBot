@@ -1,22 +1,19 @@
-from typing import Type
-
-from sqlalchemy.orm import Session
 from telebot import TeleBot
-from telebot.types import InlineKeyboardMarkup, Message, InlineKeyboardButton, CallbackQuery
+from telebot.types import Message, CallbackQuery
 
 from buttons import render_team_buttons
 from checks import check_admin
+from database.dao import get_teams, update_team
 from locale import TeamMessages, CommonMessages
-from models import Team
 
 
-def register_team_reset_commands(bot: TeleBot, session: Session):
+def register_team_reset_commands(bot: TeleBot):
     @bot.message_handler(commands=['resetleader'])
     def reset_leader(message: Message):
-        if not check_admin(bot, message, session):
+        if not check_admin(bot, message):
             return
 
-        teams = session.query(Team).all()
+        teams = get_teams()
         if not teams:
             bot.reply_to(message, TeamMessages.NO_TEAMS)
             return
@@ -34,18 +31,16 @@ def register_team_reset_commands(bot: TeleBot, session: Session):
         message_id = call.message.message_id
 
         team_id = int(call.data.split('_')[-1])
-        team = session.query(Team).get(team_id)
-        team.leader_id = None
-        session.commit()
+        team = update_team(team_id=team_id, leader_id=None)
 
         bot.edit_message_text(TeamMessages.RESET_LEADER_SUCCESS.format(team_name=team.team_name), chat_id, message_id)
 
     @bot.message_handler(commands=['resettask'])
     def reset_task(message: Message):
-        if not check_admin(bot, message, session):
+        if not check_admin(bot, message):
             return
 
-        teams = session.query(Team).all()
+        teams = get_teams()
         if not teams:
             bot.reply_to(message, TeamMessages.NO_TEAMS)
             return
@@ -63,9 +58,7 @@ def register_team_reset_commands(bot: TeleBot, session: Session):
         message_id = call.message.message_id
 
         team_id = int(call.data.split('_')[-1])
-        team = session.query(Team).get(team_id)
-        team.current_chain_order = 0
-        session.commit()
+        team = update_team(team_id=team_id, current_chain_order=0)
 
         bot.edit_message_text(TeamMessages.RESET_TASK_SUCCESS.format(team_name=team.team_name), chat_id, message_id)
 

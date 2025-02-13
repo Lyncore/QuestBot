@@ -2,8 +2,8 @@ from typing import Type
 
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+from database.models import Task, Team
 from locale import CommonMessages, ButtonMessages
-from models import Task, Team
 
 
 def render_team_buttons(
@@ -38,7 +38,7 @@ def render_task_buttons(
         )
         if task.id in selected_tasks:
             index = selected_tasks.index(task.id)
-            btn_text += f' (#{index})'
+            btn_text += f' (#{index + 1})'
         markup.add(InlineKeyboardButton(
             text=btn_text,
             callback_data=f'{callback_select}_{task.id}'

@@ -1,24 +1,24 @@
 from collections import defaultdict
 
-from sqlalchemy.orm import Session
 from telebot import TeleBot
 from telebot.types import CallbackQuery, Message
 
 from buttons import render_task_buttons, render_team_buttons
 from checks import check_admin
+from database.dao import get_teams, get_tasks, delete_chains_by_team, add_chains, get_team_by_id, get_tasks_by_team
+from database.models import Chain
 from locale import TaskMessages, CommonMessages
-from models import Team, Task, Chain
 
 
-def register_task_assign_commands(bot: TeleBot, session: Session):
+def register_task_assign_commands(bot: TeleBot):
     temp_data = defaultdict(dict)
 
     @bot.message_handler(commands=['assigntask'])
     def assign_task(message: Message):
-        if not check_admin(bot, message, session):
+        if not check_admin(bot, message):
             return
 
-        teams = session.query(Team).all()
+        teams = get_teams()
         if not teams:
             bot.reply_to(message, TaskMessages.NO_TASKS)
             return
@@ -46,7 +46,7 @@ def register_task_assign_commands(bot: TeleBot, session: Session):
             'message_id': call.message.message_id
         }
 
-        tasks = session.query(Task).all()
+        tasks = get_tasks()
         if not tasks:
             bot.answer_callback_query(call.id, TaskMessages.NO_TASKS)
             return
@@ -77,7 +77,7 @@ def register_task_assign_commands(bot: TeleBot, session: Session):
             temp_data[chat_id]['selected_tasks'].append(task_id)
 
         # Обновляем клавиатуру с отметками выбранных заданий
-        tasks = session.query(Task).all()
+        tasks = get_tasks()
         selected_tasks = temp_data[chat_id]['selected_tasks']
         markup = render_task_buttons(
             tasks,
@@ -110,45 +110,33 @@ def register_task_assign_commands(bot: TeleBot, session: Session):
 
         # Сохраняем цепочку заданий
         team_id = temp_data[chat_id]['team_id']
-        try:
-            # Удаляем старые привязки
-            session.query(Chain).filter_by(team_id=team_id).delete()
 
-            # Добавляем новые задания с правильным порядком
-            for order, task_id in enumerate(temp_data[chat_id]['selected_tasks']):
-                chain = Chain(team_id=team_id, task_id=task_id, order=order)
-                session.add(chain)
+        # Удаляем старые привязки
+        delete_chains_by_team(team_id)
 
-            session.commit()
+        # Добавляем новые задания с правильным порядком
+        selected_tasks = enumerate(temp_data[chat_id]['selected_tasks'])
+        chains = [Chain(team_id=team_id, task_id=task_id, order=order) for order, task_id in selected_tasks]
 
-            # Получаем информацию для отчета
-            team = session.query(Team).get(team_id)
-            tasks = session.query(Task).filter(Task.id.in_(temp_data[chat_id]['selected_tasks'])).all()
+        add_chains(chains)
 
-            task_list = '\n'.join([f'{i + 1}. {task.task_name[:30]}...' for i, task in enumerate(tasks)])
+        # Получаем информацию для отчета
+        team = get_team_by_id(team_id)
+        tasks = get_tasks_by_team(team_id)
 
-            report = TaskMessages.TASK_ASSIGNMENT_REPORT.format(
-                team_name=team.team_name,
-                code_word=team.code_word,
-                count=len(tasks),
-                task_list=task_list
-            )
+        task_list = '\n'.join([f'{i + 1}. {task.task_name[:30]}...' for i, task in enumerate(tasks)])
 
-            bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=report
-            )
+        report = TaskMessages.TASK_ASSIGNMENT_REPORT.format(
+            team_name=team.team_name,
+            code_word=team.code_word,
+            count=len(tasks),
+            task_list=task_list
+        )
 
-        except Exception as e:
-            session.rollback()
-            bot.edit_message_text(
-                chat_id=chat_id,
-                message_id=message_id,
-                text=CommonMessages.ERROR_TEMPLATE.format(
-                    error=str(e)
-                )
-            )
+        bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=report
+        )
 
-        finally:
-            del temp_data[chat_id]
+        del temp_data[chat_id]
