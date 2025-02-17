@@ -5,7 +5,7 @@ from pyotp import TOTP
 from telebot import TeleBot
 from telebot.types import Message
 
-from database.dao import get_otp, set_otp, get_admin
+from database.dao import get_otp, set_otp, get_admin, add_admin
 from locale import AuthMessages
 
 
@@ -31,7 +31,7 @@ def register_auth_commands(bot: TeleBot, totp: TOTP):
 
     def process_otp(message: Message, user_id: int):
         if totp.verify(message.text):
-            set_admin(user_id=user_id)
+            add_admin(user_id=user_id)
             bot.reply_to(message, AuthMessages.BECOME_ADMIN)
         else:
             bot.reply_to(message, AuthMessages.INVALID_OTP)

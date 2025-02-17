@@ -2,9 +2,9 @@ from os import getenv
 
 import telebot
 from dotenv import load_dotenv
+from telebot.types import BotCommand
 
 load_dotenv()
-from telebot.types import BotCommand
 
 from checks import check_admin
 from commands.task_assign import register_task_assign_commands
