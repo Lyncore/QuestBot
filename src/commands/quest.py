@@ -101,7 +101,7 @@ def register_quest_commands(bot: TeleBot):
         bot.register_next_step_handler(msg, check_task_code, team, current_chain.task)
 
     def check_task_code(message: Message, team: Team, current_team_task: Task):
-        if message.text != current_team_task.code_word:
+        if current_team_task.code_word.lower() not in message.text.lower():
             bot.reply_to(message, QuestMessages.WRONG_TASK_CODE)
             return
 
