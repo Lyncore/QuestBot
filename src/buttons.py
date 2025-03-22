@@ -1,15 +1,54 @@
 from typing import Type
 
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 
 from database.models import Task, Team
 from locale import CommonMessages, ButtonMessages
 
 
+def render_main_menu(is_admin: bool = False):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    if is_admin:
+        markup.add(
+            ButtonMessages.CREATE_TEAM,
+            ButtonMessages.CREATE_TASK,
+            ButtonMessages.EDIT_TEAM,
+            ButtonMessages.EDIT_TASK,
+            ButtonMessages.LIST_TEAM,
+            ButtonMessages.LIST_TASK,
+
+        )
+        markup.add(
+            ButtonMessages.ASSIGN_TASK,
+            ButtonMessages.RESET_LEADER,
+            ButtonMessages.RESET_TASK,
+            row_width=1
+        )
+    else:
+        markup.add(
+            ButtonMessages.JOIN_TEAM,
+            ButtonMessages.CURRENT_TASK,
+            ButtonMessages.NEXT_TASK,
+            ButtonMessages.HELP
+        )
+    return markup
+
+
+def render_cancel_button(add_skip: bool = False):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(CommonMessages.CANCEL)
+    if add_skip:
+        markup.add(CommonMessages.SKIP)
+    return markup
+
+
 def render_team_buttons(
         teams: list[Type[Team]],
         callback_finish: str,
-        callback_cancel: str
+        callback_cancel: str,
+        page: int = 0,
+        total_pages: int = 0,
+        total_teams: int = 0
 ):
     markup = InlineKeyboardMarkup(row_width=1)
     for team in teams:
@@ -25,6 +64,23 @@ def render_team_buttons(
 
 
 def render_task_buttons(
+        tasks: list[Type[Task]],
+        callback_finish: str,
+        callback_cancel: str
+):
+    markup = InlineKeyboardMarkup(row_width=1)
+    for task in tasks:
+        markup.add(InlineKeyboardButton(
+            text=ButtonMessages.TASK_BUTTON.format(
+                name=task.task_name[:20]
+            ),
+            callback_data=f'{callback_finish}_{task.id}'
+        ))
+    markup.add(InlineKeyboardButton(CommonMessages.CANCEL, callback_data=callback_cancel))
+    return markup
+
+
+def render_task_assign_buttons(
         tasks: list[Type[Task]],
         selected_tasks: list[int],
         callback_select: str,

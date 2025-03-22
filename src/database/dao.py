@@ -86,6 +86,14 @@ def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
 
 
 @connection
+def get_team_by_name(session: Session, team_name: str) -> Optional[Team]:
+    try:
+        return session.query(Team).filter_by(team_name=team_name).first()
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+
+
+@connection
 def get_team_by_leader(session: Session, leader_id: int) -> Optional[Team]:
     try:
         return session.query(Team).filter_by(leader_id=leader_id).first()

@@ -1,56 +1,87 @@
 from telebot import TeleBot
+from telebot.states import StatesGroup, State
+from telebot.states.sync import StateContext
 from telebot.types import Message
 
+from buttons import render_cancel_button, render_main_menu
 from checks import check_admin
 from database.dao import add_task, get_tasks
 from database.models import Task
-from locale import TaskMessages, CommonMessages
+from locale import TaskMessages, CommonMessages, ButtonMessages
+
+
+class TaskCreateState(StatesGroup):
+    name = State()
+    desc = State()
+    media = State()
+    location = State()
+    code = State()
 
 
 def register_task_setting_commands(bot: TeleBot):
     # Создание задания (админ)
-    @bot.message_handler(commands=['createtask'])
-    def create_task(message: Message):
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.CREATE_TASK)
+    def create_task(message: Message, state: StateContext):
         if not check_admin(bot, message):
             return
-        msg = bot.reply_to(message, TaskMessages.ENTER_TASK_NAME)
-        bot.register_next_step_handler(msg, process_task_name)
+        state.set(TaskCreateState.name)
+        bot.reply_to(message, TaskMessages.ENTER_TASK_NAME, reply_markup=render_cancel_button())
 
-    def process_task_name(message: Message):
-        task = Task(task_name=message.text)
-        msg = bot.reply_to(message, TaskMessages.ENTER_DESCRIPTION)
-        bot.register_next_step_handler(msg, process_task_description, task)
+    @bot.message_handler(state=TaskCreateState.name)
+    def process_task_name(message: Message, state: StateContext):
+        state.set(TaskCreateState.desc)
+        state.add_data(task_name=message.text)
+        bot.reply_to(message, TaskMessages.ENTER_DESCRIPTION, reply_markup=render_cancel_button())
 
-    def process_task_description(message: Message, task: Task):
-        task.description = message.text
-        msg = bot.reply_to(message, TaskMessages.ENTER_MEDIA)
-        bot.register_next_step_handler(msg, process_task_media, task)
+    @bot.message_handler(state=TaskCreateState.desc)
+    def process_task_description(message: Message, state: StateContext):
+        state.set(TaskCreateState.media)
+        state.add_data(description=message.text, reply_markup=render_cancel_button())
+        bot.reply_to(message, TaskMessages.ENTER_MEDIA, reply_markup=render_cancel_button(add_skip=True))
 
-    def process_task_media(message: Message, task: Task):
+    @bot.message_handler(state=TaskCreateState.media, content_types=['photo', 'sticker', 'animation'])
+    def process_task_media(message: Message, state: StateContext):
+        state.set(TaskCreateState.location)
         if message.photo:
-            task.photo = message.photo[-1].file_id
+            state.add_data(photo=message.photo[-1].file_id)
         elif message.sticker:
-            task.sticker = message.sticker.file_id
+            state.add_data(sticker=message.sticker.file_id)
         elif message.animation:
-            task.animation = message.animation.file_id
+            state.add_data(animation=message.animation.file_id)
 
-        msg = bot.reply_to(message, TaskMessages.ENTER_LOCATION)
-        bot.register_next_step_handler(msg, process_task_location, task)
+        bot.reply_to(message, TaskMessages.ENTER_LOCATION, reply_markup=render_cancel_button())
 
-    def process_task_location(message: Message, task: Task):
+    @bot.message_handler(state=TaskCreateState.media)
+    def process_wrong_media(message: Message):
+        bot.reply_to(message, TaskMessages.ENTER_MEDIA, reply_markup=render_cancel_button())
 
-        task.location = message.text
+    @bot.message_handler(state=TaskCreateState.location)
+    def process_task_location(message: Message, state: StateContext):
+        state.set(TaskCreateState.code)
+        state.add_data(location=message.text)
 
-        msg = bot.reply_to(message, TaskMessages.ENTER_CODE_WORD)
-        bot.register_next_step_handler(msg, process_task_code, task)
+        bot.reply_to(message, TaskMessages.ENTER_CODE_WORD, reply_markup=render_cancel_button())
 
-    def process_task_code(message: Message, task: Task):
-        task.code_word = message.text
+    @bot.message_handler(state=TaskCreateState.code)
+    def process_task_code(message: Message, state: StateContext):
+        with state.data() as data:
+            task = Task()
+            task.task_name = data.get('task_name')
+            task.description = data.get('description')
+            task.photo = data.get('photo')
+            task.sticker = data.get('sticker')
+            task.animation = data.get('animation')
+            task.location = data.get('location')
+            task.code_word = message.text
+            add_task(task)
 
-        add_task(task)
-        bot.reply_to(message, TaskMessages.TASK_CREATED)
+        bot.reply_to(
+            message,
+            TaskMessages.TASK_CREATED,
+            reply_markup=render_main_menu(check_admin(bot, message, silent=True))
+        )
 
-    @bot.message_handler(commands=['listtask'])
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.LIST_TASK)
     def list_task(message: Message):
         if not check_admin(bot, message):
             return
