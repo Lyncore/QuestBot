@@ -1,11 +1,11 @@
 from telebot import TeleBot
 from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
-from telebot.types import Message
+from telebot.types import Message, CallbackQuery, InputMedia, InputMediaAnimation, InputMediaPhoto
 
-from buttons import render_cancel_button, render_main_menu
+from buttons import render_cancel_button, render_main_menu, render_task_buttons
 from checks import check_admin
-from database.dao import add_task, get_tasks
+from database.dao import add_task, get_tasks, get_task_by_id
 from database.models import Task
 from locale import TaskMessages, CommonMessages, ButtonMessages
 
@@ -90,23 +90,46 @@ def register_task_setting_commands(bot: TeleBot):
             bot.reply_to(message, TaskMessages.NO_TASKS)
         else:
             msg = TaskMessages.LIST_TASKS_HEADER
-            for task in tasks:
-                msg += TaskMessages.TASK_ITEM_TEMPLATE.format(
-                    id=task.id,
-                    task_name=task.task_name,
-                    description=task.description,
-                    photo=CommonMessages.YES if task.photo else CommonMessages.NO,
-                    sticker=CommonMessages.YES if task.sticker else CommonMessages.NO,
-                    animation=CommonMessages.YES if task.animation else CommonMessages.NO,
-                    location=task.location,
-                    code_word=task.code_word
-                )
-                if len(task.chains) > 0:
-                    msg += TaskMessages.ASSIGNED_TEAMS_HEADER
-                    for chain in task.chains:
-                        msg += TaskMessages.ASSIGNED_TEAMS_TEMPLATE.format(
-                            team_name=chain.team.team_name,
-                            task_chain_order=chain.order + 1
-                        )
 
-            bot.reply_to(message, msg)
+            markup = render_task_buttons(tasks, "list_task", "cancel_list_task")
+
+            bot.reply_to(message, msg, reply_markup=markup)
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("list_task"))
+    def process_list_task(call: CallbackQuery):
+        task_id = int(call.data.split('_')[-1])
+        task = get_task_by_id(task_id)
+
+        msg = TaskMessages.TASK_ITEM_TEMPLATE.format(
+            id=task.id,
+            task_name=task.task_name,
+            description=task.description,
+            photo=CommonMessages.YES if task.photo else CommonMessages.NO,
+            sticker=CommonMessages.YES if task.sticker else CommonMessages.NO,
+            animation=CommonMessages.YES if task.animation else CommonMessages.NO,
+            location=task.location,
+            code_word=task.code_word
+        )
+        if len(task.chains) > 0:
+            msg += TaskMessages.ASSIGNED_TEAMS_HEADER
+            for chain in task.chains:
+                msg += TaskMessages.ASSIGNED_TEAMS_TEMPLATE.format(
+                    team_name=chain.team.team_name,
+                    task_chain_order=chain.order + 1
+                )
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+        bot.edit_message_text(msg, chat_id, message_id)
+        if task.photo:
+            bot.send_photo(chat_id, task.photo)
+        if task.sticker:
+            bot.send_sticker(chat_id, task.sticker)
+        if task.animation:
+            bot.send_animation(chat_id, task.animation)
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("cancel_list_task"))
+    def cancel_team_list(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+
+        bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)

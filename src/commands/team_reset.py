@@ -13,9 +13,9 @@ def register_team_reset_commands(bot: TeleBot):
         if not check_admin(bot, message):
             return
 
-        teams = get_teams()
+        teams = get_teams(leader_only=True)
         if not teams:
-            bot.reply_to(message, TeamMessages.NO_TEAMS)
+            bot.reply_to(message, TeamMessages.RESET_LEADER_EMPTY)
             return
 
         markup = render_team_buttons(
@@ -40,9 +40,9 @@ def register_team_reset_commands(bot: TeleBot):
         if not check_admin(bot, message):
             return
 
-        teams = get_teams()
+        teams = get_teams(started_only=True)
         if not teams:
-            bot.reply_to(message, TeamMessages.NO_TEAMS)
+            bot.reply_to(message, TeamMessages.RESET_TASK_EMPTY)
             return
 
         markup = render_team_buttons(
@@ -68,5 +68,5 @@ def register_team_reset_commands(bot: TeleBot):
         message_id = call.message.message_id
 
         bot.delete_message(chat_id, message_id)
-        bot.send_message(chat_id, CommonMessages.SELECT_CANCEL)
+        bot.send_message(chat_id, CommonMessages.CANCEL_ACTION)
         return

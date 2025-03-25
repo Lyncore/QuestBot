@@ -15,7 +15,7 @@ from commands.task_assign import register_task_assign_commands
 from commands.quest import register_quest_commands
 from commands.auth import register_auth_commands, init_otp
 from database.database import create_tables
-from locale import CommonMessages, CommandDescription
+from locale import CommonMessages, CommandDescription, ButtonMessages
 from commands.team import register_team_setting_commands
 from commands.task import register_task_setting_commands
 from commands.team_reset import register_team_reset_commands
@@ -47,11 +47,11 @@ def handle_cancel_commands(message: Message, state: StateContext):
     state.delete()
     bot.send_message(
         message.chat.id,
-        CommonMessages.SELECT_CANCEL,
+        CommonMessages.CANCEL_ACTION,
         reply_markup=render_main_menu(check_admin(bot, message, silent=True)))
 
 
-@bot.message_handler(commands=['help'])
+@bot.message_handler(func=lambda m: m.text == ButtonMessages.HELP)
 def help_message(message):
     admin_commands_desc = '\n'.join([f'/{cmd} - {desc}' for cmd, desc in CommandDescription.admin_commands.items()])
     user_commands_desc = '\n'.join([f'/{cmd} - {desc}' for cmd, desc in CommandDescription.user_commands.items()])

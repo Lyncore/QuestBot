@@ -13,7 +13,7 @@ from locale import TaskMessages, CommonMessages, ButtonMessages
 def register_task_assign_commands(bot: TeleBot):
     temp_data = defaultdict(dict)
 
-    @bot.message_handler(func=lambda m: m.text ==ButtonMessages.ASSIGN_TASK)
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.ASSIGN_TASK)
     def assign_task(message: Message):
         if not check_admin(bot, message):
             return
@@ -32,7 +32,7 @@ def register_task_assign_commands(bot: TeleBot):
         message_id = call.message.message_id
 
         bot.delete_message(chat_id, message_id)
-        bot.send_message(chat_id, CommonMessages.SELECT_CANCEL)
+        bot.send_message(chat_id, CommonMessages.CANCEL_ACTION)
         return
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith('assign_team_'))
@@ -101,7 +101,7 @@ def register_task_assign_commands(bot: TeleBot):
         if call.data == 'cancel_selection':
             del temp_data[chat_id]
             bot.delete_message(chat_id, message_id)
-            bot.send_message(chat_id, CommonMessages.SELECT_CANCEL)
+            bot.send_message(chat_id, CommonMessages.CANCEL_ACTION)
             return
 
         if not temp_data[chat_id]['selected_tasks']:

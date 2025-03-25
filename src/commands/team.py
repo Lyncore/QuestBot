@@ -100,19 +100,35 @@ def register_team_setting_commands(bot: TeleBot):
         else:
             msg = TeamMessages.LIST_TEAMS_HEADER
 
-            for team in teams:
-                current_task = (team.current_chain_order + 1) if list(
-                    filter(lambda x: x.order == team.current_chain_order,
-                           team.chains)) else TeamMessages.TEAM_TASKS_COMPLETED
+            markup = render_team_buttons(teams, 'list_team', 'cancel_list_team')
+            bot.reply_to(message, msg, reply_markup = markup)
 
-                msg += TeamMessages.TEAM_ITEM_TEMPLATE.format(
-                    id=team.id,
-                    team_name=team.team_name,
-                    description=team.description,
-                    welcome=team.welcome_message or CommonMessages.NO,
-                    final=team.final_message or CommonMessages.NO,
-                    current_task=current_task,
-                    code=team.code_word
-                )
-            bot.reply_to(message, msg)
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("list_team_"))
+    def process_team_list(call: CallbackQuery):
+        team_id = int(call.data.split('_')[-1])
 
+        team = get_team_by_id(team_id)
+
+        current_task = (team.current_chain_order + 1) if list(
+            filter(lambda x: x.order == team.current_chain_order,
+                   team.chains)) else TeamMessages.TEAM_TASKS_COMPLETED
+
+        msg = TeamMessages.TEAM_ITEM_TEMPLATE.format(
+            id=team.id,
+            team_name=team.team_name,
+            description=team.description,
+            welcome=team.welcome_message or CommonMessages.NO,
+            final=team.final_message or CommonMessages.NO,
+            current_task=current_task,
+            code=team.code_word
+        )
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+        bot.edit_message_text(msg, chat_id, message_id)
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("cancel_list_team"))
+    def cancel_team_list(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+
+        bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
