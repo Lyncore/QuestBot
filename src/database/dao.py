@@ -126,7 +126,7 @@ def get_teams(session: Session, leader_only: bool = False, started_only: bool = 
 
 
 @connection
-def get_teams_paged(session: Session, page: int = 0, limit: int = 10) -> Optional[Page[Team]]:
+def get_teams_paged(session: Session, page: int = 0, limit: int = 10) -> Optional[Page]:
     try:
         totalCount = session.query(Team).count()
         teams = session.query(Team).options(joinedload(Team.chains)).offset(page * limit).limit(limit)
