@@ -3,17 +3,17 @@ from collections import defaultdict
 from telebot import TeleBot
 from telebot.types import CallbackQuery, Message
 
-from buttons import render_task_buttons, render_team_buttons
+from buttons import render_task_assign_buttons, render_team_buttons
 from checks import check_admin
 from database.dao import get_teams, get_tasks, delete_chains_by_team, add_chains, get_team_by_id, get_tasks_by_team
 from database.models import Chain
-from locale import TaskMessages, CommonMessages
+from locale import TaskMessages, CommonMessages, ButtonMessages
 
 
 def register_task_assign_commands(bot: TeleBot):
     temp_data = defaultdict(dict)
 
-    @bot.message_handler(commands=['assigntask'])
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.ASSIGN_TASK)
     def assign_task(message: Message):
         if not check_admin(bot, message):
             return
@@ -32,7 +32,7 @@ def register_task_assign_commands(bot: TeleBot):
         message_id = call.message.message_id
 
         bot.delete_message(chat_id, message_id)
-        bot.send_message(chat_id, CommonMessages.SELECT_CANCEL)
+        bot.send_message(chat_id, CommonMessages.CANCEL_ACTION)
         return
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith('assign_team_'))
@@ -51,7 +51,7 @@ def register_task_assign_commands(bot: TeleBot):
             bot.answer_callback_query(call.id, TaskMessages.NO_TASKS)
             return
         selected_tasks = temp_data[chat_id]['selected_tasks']
-        markup = render_task_buttons(
+        markup = render_task_assign_buttons(
             tasks,
             selected_tasks,
             callback_select='task',
@@ -79,7 +79,7 @@ def register_task_assign_commands(bot: TeleBot):
         # Обновляем клавиатуру с отметками выбранных заданий
         tasks = get_tasks()
         selected_tasks = temp_data[chat_id]['selected_tasks']
-        markup = render_task_buttons(
+        markup = render_task_assign_buttons(
             tasks,
             selected_tasks,
             callback_select='task',
@@ -101,7 +101,7 @@ def register_task_assign_commands(bot: TeleBot):
         if call.data == 'cancel_selection':
             del temp_data[chat_id]
             bot.delete_message(chat_id, message_id)
-            bot.send_message(chat_id, CommonMessages.SELECT_CANCEL)
+            bot.send_message(chat_id, CommonMessages.CANCEL_ACTION)
             return
 
         if not temp_data[chat_id]['selected_tasks']:

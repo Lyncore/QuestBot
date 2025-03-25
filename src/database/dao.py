@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from database.database import connection
 from database.models import Admin, OTPKey, Team, Task, Chain
+from page import Page
 
 
 @connection
@@ -80,7 +81,15 @@ def update_team(
 @connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
     try:
-        return session.get(Team, team_id)
+        return session.query(Team).options(joinedload(Team.chains)).get(team_id)
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+
+
+@connection
+def get_team_by_name(session: Session, team_name: str) -> Optional[Team]:
+    try:
+        return session.query(Team).filter_by(team_name=team_name).first()
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
@@ -102,13 +111,29 @@ def get_team_by_code(session: Session, code_word: str) -> Optional[Team]:
 
 
 @connection
-def get_teams(session: Session) -> List[Type[Team]]:
+def get_teams(session: Session, leader_only: bool = False, started_only: bool = False) -> List[Type[Team]]:
     try:
-        teams = session.query(Team).options(joinedload(Team.chains)).all()
+        query = session.query(Team).options(joinedload(Team.chains))
+        if leader_only:
+            query = query.where(Team.leader_id.isnot(None))
+        if started_only:
+            query = query.where(Team.current_chain_order > 0)
+        teams = query.all()
         return teams
     except SQLAlchemyError as e:
         print(f'Error {e}')
         return []
+
+
+@connection
+def get_teams_paged(session: Session, page: int = 0, limit: int = 10) -> Optional[Page[Team]]:
+    try:
+        totalCount = session.query(Team).count()
+        teams = session.query(Team).options(joinedload(Team.chains)).offset(page * limit).limit(limit)
+        return Page(totalCount, page, teams)
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+        return None
 
 
 @connection
@@ -121,6 +146,12 @@ def add_task(session: Session, task: Task) -> Optional[Task]:
         print(f'Error {e}')
         session.rollback()
 
+@connection
+def get_task_by_id(session: Session, task_id: int) -> Optional[Task]:
+    try:
+        return session.query(Task).options(joinedload(Task.chains).joinedload(Chain.team)).get(task_id)
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
 
 @connection
 def get_tasks(session: Session) -> List[Type[Task]]:

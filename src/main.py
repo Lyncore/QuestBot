@@ -2,7 +2,11 @@ from os import getenv
 
 import telebot
 from dotenv import load_dotenv
-from telebot.types import BotCommand
+from telebot import StateMemoryStorage, custom_filters
+from telebot.states.sync import StateContext
+from telebot.types import BotCommand, Message
+
+from buttons import render_main_menu
 
 load_dotenv()
 
@@ -11,13 +15,18 @@ from commands.task_assign import register_task_assign_commands
 from commands.quest import register_quest_commands
 from commands.auth import register_auth_commands, init_otp
 from database.database import create_tables
-from locale import CommonMessages, CommandDescription
+from locale import CommonMessages, CommandDescription, ButtonMessages
 from commands.team import register_team_setting_commands
 from commands.task import register_task_setting_commands
 from commands.team_reset import register_team_reset_commands
 
 totp = init_otp()
-bot = telebot.TeleBot(getenv('TELEGRAM_TOKEN'), parse_mode="markdown")
+state_storage = StateMemoryStorage()
+bot = telebot.TeleBot(
+    token=getenv('TELEGRAM_TOKEN'),
+    state_storage=state_storage, use_class_middlewares=True,
+    parse_mode="markdown"
+)
 
 # --- Обработчики команд ---
 bot.set_my_commands(commands=[BotCommand(cmd, desc) for cmd, desc in CommandDescription.user_commands.items()])
@@ -25,10 +34,24 @@ bot.set_my_commands(commands=[BotCommand(cmd, desc) for cmd, desc in CommandDesc
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    bot.send_message(message.chat.id, CommonMessages.WELCOME_MESSAGE)
+    is_admin = check_admin(bot, message, silent=True)
+    bot.send_message(
+        message.chat.id,
+        CommonMessages.WELCOME_MESSAGE,
+        reply_markup=render_main_menu(is_admin)
+    )
 
 
-@bot.message_handler(commands=['help'])
+@bot.message_handler(state="*", func=lambda m: m.text == CommonMessages.CANCEL)
+def handle_cancel_commands(message: Message, state: StateContext):
+    state.delete()
+    bot.send_message(
+        message.chat.id,
+        CommonMessages.CANCEL_ACTION,
+        reply_markup=render_main_menu(check_admin(bot, message, silent=True)))
+
+
+@bot.message_handler(func=lambda m: m.text == ButtonMessages.HELP)
 def help_message(message):
     admin_commands_desc = '\n'.join([f'/{cmd} - {desc}' for cmd, desc in CommandDescription.admin_commands.items()])
     user_commands_desc = '\n'.join([f'/{cmd} - {desc}' for cmd, desc in CommandDescription.user_commands.items()])
@@ -48,9 +71,22 @@ register_quest_commands(bot)
 
 @bot.message_handler(func=lambda m: True)
 def echo_all(message):
-    bot.reply_to(message, CommonMessages.COMMON_MESSAGE)
+    bot.reply_to(
+        message,
+        CommonMessages.COMMON_MESSAGE,
+        reply_markup=render_main_menu(check_admin(bot, message, silent=True))
+    )
 
 
+# Add custom filters
+bot.add_custom_filter(custom_filters.StateFilter(bot))
+bot.add_custom_filter(custom_filters.IsDigitFilter())
+bot.add_custom_filter(custom_filters.TextMatchFilter())
+
+# necessary for state parameter in handlers.
+from telebot.states.sync.middleware import StateMiddleware
+
+bot.setup_middleware(StateMiddleware(bot))
 # Запуск бота
 if __name__ == '__main__':
     create_tables()

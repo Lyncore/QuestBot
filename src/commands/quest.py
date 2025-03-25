@@ -4,12 +4,12 @@ from telebot.types import Message
 
 from database.dao import get_team_by_leader, get_team_by_code, update_team, get_current_chain
 from database.models import Team, Task
-from locale import QuestMessages
+from locale import QuestMessages, ButtonMessages
 
 
 def register_quest_commands(bot: TeleBot):
     # Присоединение лидера к команде
-    @bot.message_handler(commands=['join'])
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
     def join_team(message: Message):
         team = get_team_by_leader(message.from_user.id)
         if team:
@@ -77,7 +77,7 @@ def register_quest_commands(bot: TeleBot):
                 location=task.location
             ))
 
-    @bot.message_handler(commands=['task'])
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.CURRENT_TASK)
     def get_task(message: Message):
         current_chain = preprocess_task(message)
         if not current_chain:
@@ -85,7 +85,7 @@ def register_quest_commands(bot: TeleBot):
         send_task(message, current_chain.task)
 
     # Обработка перехода к следующему заданию
-    @bot.message_handler(commands=['next'])
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.NEXT_TASK)
     def next_task(message: Message):
         team = get_team_by_leader(message.from_user.id)
         if not team:
@@ -101,7 +101,7 @@ def register_quest_commands(bot: TeleBot):
         bot.register_next_step_handler(msg, check_task_code, team, current_chain.task)
 
     def check_task_code(message: Message, team: Team, current_team_task: Task):
-        if message.text != current_team_task.code_word:
+        if current_team_task.code_word.lower() not in message.text.lower():
             bot.reply_to(message, QuestMessages.WRONG_TASK_CODE)
             return
 
