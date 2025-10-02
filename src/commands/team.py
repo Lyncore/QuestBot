@@ -69,6 +69,7 @@ def register_team_setting_commands(bot: TeleBot):
             team_id = data.get('team_id')
             if team_id:
                 team = get_team_by_id(team_id)
+                
 
                 pass
             else:

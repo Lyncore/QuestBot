@@ -2,7 +2,7 @@ from telebot import TeleBot
 from telebot.types import Message
 
 from database.dao import get_admin
-from src.locale import AuthMessages
+from msg_locale import AuthMessages
 
 
 def check_admin(bot: TeleBot, message: Message, silent: bool = False):
