@@ -4,7 +4,7 @@ from telebot.types import Message
 
 from database.dao import get_team_by_leader, get_team_by_code, update_team, get_current_chain
 from database.models import Team, Task
-from locale import QuestMessages, ButtonMessages
+from msg_locale import QuestMessages, ButtonMessages
 
 
 def register_quest_commands(bot: TeleBot):

@@ -15,7 +15,7 @@ from commands.task_assign import register_task_assign_commands
 from commands.quest import register_quest_commands
 from commands.auth import register_auth_commands, init_otp
 from database.database import create_tables
-from locale import CommonMessages, CommandDescription, ButtonMessages
+from msg_locale import CommonMessages, CommandDescription, ButtonMessages
 from commands.team import register_team_setting_commands
 from commands.task import register_task_setting_commands
 from commands.team_reset import register_team_reset_commands

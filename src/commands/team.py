@@ -7,7 +7,7 @@ from buttons import render_team_buttons, render_cancel_button, render_main_menu
 from checks import check_admin
 from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name
 from database.models import Team
-from locale import TeamMessages, CommonMessages, ButtonMessages
+from msg_locale import TeamMessages, CommonMessages, ButtonMessages
 
 
 class TeamCreateState(StatesGroup):
