@@ -1,3 +1,4 @@
+import secrets
 from telebot import TeleBot
 from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
@@ -79,6 +80,7 @@ def register_team_setting_commands(bot: TeleBot):
                 team.welcome_message = data.get('welcome_message')
                 team.final_message = data.get('final_message')
                 team.code_word = message.text
+                team.invite_token = secrets.token_urlsafe(8)
                 add_team(team)
 
         bot.reply_to(
@@ -86,7 +88,9 @@ def register_team_setting_commands(bot: TeleBot):
             TeamMessages.TEAM_CREATED.format(
                 team_name=team.team_name,
                 id=team.id
-            ),
+            )+"\n"+TeamMessages.TEAM_LINK.format(
+                team_link=f"https://t.me/nkeQuestBot?start={team.invite_token}"
+                ),
             reply_markup=render_main_menu(check_admin(bot, message, silent=True))
         )
         state.delete()
@@ -121,7 +125,8 @@ def register_team_setting_commands(bot: TeleBot):
             welcome=team.welcome_message or CommonMessages.NO,
             final=team.final_message or CommonMessages.NO,
             current_task=current_task,
-            code=team.code_word
+            code=team.code_word,
+            link = f'https://t.me/nkeQuestBot?start={team.invite_token}'
         )
         chat_id = call.message.chat.id
         message_id = call.message.message_id
