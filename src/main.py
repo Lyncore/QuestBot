@@ -15,17 +15,19 @@ from commands.task_assign import register_task_assign_commands
 from commands.quest import register_quest_commands
 from commands.auth import register_auth_commands, init_otp
 from database.database import create_tables
-from msg_locale import CommonMessages, CommandDescription, ButtonMessages
+from msg_locale import CommonMessages, CommandDescription, ButtonMessages, QuestMessages
 from commands.team import register_team_setting_commands
 from commands.task import register_task_setting_commands
 from commands.team_reset import register_team_reset_commands
+
+from database.dao import join_team_via_invite_token
 
 totp = init_otp()
 state_storage = StateMemoryStorage()
 bot = telebot.TeleBot(
     token=getenv('TELEGRAM_TOKEN'),
     state_storage=state_storage, use_class_middlewares=True,
-    parse_mode="markdown"
+    # parse_mode="markdown"
 )
 
 # --- Обработчики команд ---
@@ -34,12 +36,62 @@ bot.set_my_commands(commands=[BotCommand(cmd, desc) for cmd, desc in CommandDesc
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
+
+    print('Full text: ', message.text)
+    user_id = message.from_user.id
+    args = message.text.split()
+    invite_token = None
+
+    if len(args)>1:
+        try:
+            invite_token = str(args[1])
+            print(invite_token)
+        except: 
+            print("Invite token is none")
+            invite_token = None
     is_admin = check_admin(bot, message, silent=True)
-    bot.send_message(
-        message.chat.id,
-        CommonMessages.WELCOME_MESSAGE,
-        reply_markup=render_main_menu(is_admin)
-    )
+
+    if invite_token:
+        print("Searching team via token")
+        team = join_team_via_invite_token(invite_token, user_id)
+        
+        if team['status'] == 'JOINED_TO_TEAM':
+            print("joined")
+            bot.send_message(
+                message.chat.id,
+                QuestMessages.JOINED_TO_TEAM.format(
+                    team_name=team['team_name']
+                ),
+                reply_markup=render_main_menu(is_admin),
+                parse_mode=None
+            )
+        elif team['status'] == 'ALREADY_IN_TEAM':
+            print("already")
+            bot.send_message(
+                message.chat.id,
+                QuestMessages.ALREADY_IN_TEAM.format(
+                    team_name=team['team_name']
+                ),
+                reply_markup=render_main_menu(is_admin),
+                parse_mode=None
+            )
+        
+        else:
+            print("not found")
+            bot.send_message(
+                message.chat.id, 
+                QuestMessages.TEAM_NOT_FOUND, 
+                reply_markup=render_main_menu(is_admin),
+                parse_mode=None
+            )
+
+    else:   
+        bot.send_message(
+            message.chat.id,
+            CommonMessages.WELCOME_MESSAGE, 
+            reply_markup=render_main_menu(is_admin),
+            parse_mode=None
+        )
 
 
 @bot.message_handler(state="*", func=lambda m: m.text == CommonMessages.CANCEL)
