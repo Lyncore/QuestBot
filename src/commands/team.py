@@ -1,4 +1,8 @@
+from os import getenv
+from dotenv import load_dotenv
+
 import secrets
+import string
 from telebot import TeleBot
 from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
@@ -9,6 +13,13 @@ from checks import check_admin
 from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name
 from database.models import Team
 from msg_locale import TeamMessages, CommonMessages, ButtonMessages
+
+
+
+load_dotenv()
+
+
+bot_username = getenv('BOT_USERNAME')
 
 
 class TeamCreateState(StatesGroup):
@@ -63,6 +74,10 @@ def register_team_setting_commands(bot: TeleBot):
             state.add_data(final_message=message.text)
         bot.reply_to(message, TeamMessages.ENTER_CODE, reply_markup=render_cancel_button())
 
+    def generate_invite_token(length: int):
+        alphabet = string.ascii_letters + string.digits
+        return str(''.join(secrets.choice(alphabet) for _ in range(length)))
+    
     @bot.message_handler(state=TeamCreateState.code)
     def process_team_code(message: Message, state: StateContext):
 
@@ -70,8 +85,9 @@ def register_team_setting_commands(bot: TeleBot):
             team_id = data.get('team_id')
             if team_id:
                 team = get_team_by_id(team_id)
-                
 
+
+                
                 pass
             else:
                 team = Team()
@@ -80,7 +96,7 @@ def register_team_setting_commands(bot: TeleBot):
                 team.welcome_message = data.get('welcome_message')
                 team.final_message = data.get('final_message')
                 team.code_word = message.text
-                team.invite_token = secrets.token_urlsafe(8)
+                team.invite_token = generate_invite_token(8)
                 add_team(team)
 
         bot.reply_to(
@@ -89,7 +105,7 @@ def register_team_setting_commands(bot: TeleBot):
                 team_name=team.team_name,
                 id=team.id
             )+"\n"+TeamMessages.TEAM_LINK.format(
-                team_link=f"https://t.me/nkeQuestBot?start={team.invite_token}"
+                team_link=f'https://t.me/{bot_username.replace('_', r'\_')[1:]}?start={team.invite_token}'
                 ),
             reply_markup=render_main_menu(check_admin(bot, message, silent=True))
         )
@@ -126,7 +142,7 @@ def register_team_setting_commands(bot: TeleBot):
             final=team.final_message or CommonMessages.NO,
             current_task=current_task,
             code=team.code_word,
-            link = f'https://t.me/nkeQuestBot?start={team.invite_token}'
+            link = f'https://t.me/{bot_username.replace('_', r'\_')[1:]}?start={team.invite_token}'
         )
         chat_id = call.message.chat.id
         message_id = call.message.message_id
