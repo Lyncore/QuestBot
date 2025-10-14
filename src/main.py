@@ -27,7 +27,7 @@ state_storage = StateMemoryStorage()
 bot = telebot.TeleBot(
     token=getenv('TELEGRAM_TOKEN'),
     state_storage=state_storage, use_class_middlewares=True,
-    # parse_mode="markdown"
+    parse_mode="markdown"
 )
 
 # --- Обработчики команд ---
@@ -62,8 +62,7 @@ def start_message(message):
                 QuestMessages.JOINED_TO_TEAM.format(
                     team_name=team['team_name']
                 ),
-                reply_markup=render_main_menu(is_admin),
-                parse_mode=None
+                reply_markup=render_main_menu(is_admin)
             )
         elif team['status'] == 'ALREADY_IN_TEAM':
             print("already")
@@ -72,8 +71,7 @@ def start_message(message):
                 QuestMessages.ALREADY_IN_TEAM.format(
                     team_name=team['team_name']
                 ),
-                reply_markup=render_main_menu(is_admin),
-                parse_mode=None
+                reply_markup=render_main_menu(is_admin)
             )
         
         else:
@@ -81,16 +79,14 @@ def start_message(message):
             bot.send_message(
                 message.chat.id, 
                 QuestMessages.TEAM_NOT_FOUND, 
-                reply_markup=render_main_menu(is_admin),
-                parse_mode=None
+                reply_markup=render_main_menu(is_admin)
             )
 
     else:   
         bot.send_message(
             message.chat.id,
             CommonMessages.WELCOME_MESSAGE, 
-            reply_markup=render_main_menu(is_admin),
-            parse_mode=None
+            reply_markup=render_main_menu(is_admin)
         )
 
 
