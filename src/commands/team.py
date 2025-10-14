@@ -87,7 +87,7 @@ def register_team_setting_commands(bot: TeleBot):
                 team = get_team_by_id(team_id)
 
 
-                
+
                 pass
             else:
                 team = Team()
