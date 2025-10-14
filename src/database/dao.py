@@ -116,26 +116,21 @@ def join_team_via_invite_token(session: Session, invite_token: str, user_id: int
         team = session.query(Team).filter_by(invite_token=invite_token).first()
         team_name = team.team_name
 
-        if team:
-            existing = session.query(TeamMember).filter_by(
-                team_id=team.id,
-                user_id=user_id
-            ).first()
-
-            if existing:
-                status = 'ALREADY_IN_TEAM'
-                return {'status': status, 'team_name': team_name}
-            else:
-                member = TeamMember(team_id=team.id, user_id=user_id)
-                status = 'JOINED_TO_TEAM'
-                session.add(member)
-                session.commit()
-                return {'status': status, 'team_name': team_name}
+        member = TeamMember(team_id=team.id, user_id=user_id)
+        session.add(member)
+        session.commit()
+        return team_name
             
     except SQLAlchemyError as e:
         print(F'Error {e}')
 
-
+@connection
+def get_member(session: Session, user_id: int):
+    try:
+        return session.query(TeamMember).filter_by(user_id=user_id).first()
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+        return None
 @connection
 def get_teams(session: Session, leader_only: bool = False, started_only: bool = False) -> List[Type[Team]]:
     try:

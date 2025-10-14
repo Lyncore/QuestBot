@@ -20,7 +20,7 @@ from commands.team import register_team_setting_commands
 from commands.task import register_task_setting_commands
 from commands.team_reset import register_team_reset_commands
 
-from database.dao import join_team_via_invite_token
+from database.dao import join_team_via_invite_token, get_member
 
 totp = init_otp()
 state_storage = StateMemoryStorage()
@@ -52,36 +52,27 @@ def start_message(message):
     is_admin = check_admin(bot, message, silent=True)
 
     if invite_token:
-        print("Searching team via token")
-        team = join_team_via_invite_token(invite_token, user_id)
+        team = get_member(user_id)
         
-        if team['status'] == 'JOINED_TO_TEAM':
+        if team:
+            bot.send_message(
+                message.chat.id,
+                QuestMessages.ALREADY_IN_TEAM.format(
+                ),
+                reply_markup=render_main_menu(is_admin)
+            )
+        else:
+            team_name = join_team_via_invite_token(invite_token, user_id)
+            
             print("joined")
             bot.send_message(
                 message.chat.id,
                 QuestMessages.JOINED_TO_TEAM.format(
-                    team_name=team['team_name']
+                    team_name=team_name
                 ),
                 reply_markup=render_main_menu(is_admin)
             )
-        elif team['status'] == 'ALREADY_IN_TEAM':
-            print("already")
-            bot.send_message(
-                message.chat.id,
-                QuestMessages.ALREADY_IN_TEAM.format(
-                    team_name=team['team_name']
-                ),
-                reply_markup=render_main_menu(is_admin)
-            )
-        
-        else:
-            print("not found")
-            bot.send_message(
-                message.chat.id, 
-                QuestMessages.TEAM_NOT_FOUND, 
-                reply_markup=render_main_menu(is_admin)
-            )
-
+            
     else:   
         bot.send_message(
             message.chat.id,
