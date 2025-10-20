@@ -5,7 +5,7 @@ from telebot.types import CallbackQuery, Message
 
 from buttons import render_task_assign_buttons, render_team_buttons
 from checks import check_admin
-from database.dao import get_teams, get_tasks, delete_chains_by_team, add_chains, get_team_by_id, get_tasks_by_team
+from database.dao import get_teams, get_tasks, delete_chains_by_team, add_chains, get_team_by_id, get_tasks_by_team, get_user_ids_by_team
 from database.models import Chain
 from msg_locale import TaskMessages, CommonMessages, ButtonMessages
 
@@ -120,9 +120,33 @@ def register_task_assign_commands(bot: TeleBot):
 
         add_chains(chains)
 
+        # Рассылка о добавлении заданий всем участникам команды
+        user_ids = get_user_ids_by_team(team_id)
+        tasks = get_tasks_by_team(team_id)
+
+        if tasks:
+            task_list = "\n".join(f"• *{task.task_name}*" for task in tasks)
+            notification_text = (
+                f"🆕 В вашей команде появилось новое задание!\n\n"
+                f"{task_list}\n\n"
+                f"Напишите на кнопку {ButtonMessages.LIST_TASK}, чтобы начать."
+            )
+        else:
+            notification_text = f"🆕 В вашей команде обновлены задания. Нажмите на кнопку {ButtonMessages.LIST_TASK}, чтобы посмотреть."
+        
+        for user_id in user_ids:
+            try:
+                bot.send_message(
+                    chat_id=user_id,
+                    text=notification_text,
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                print(f"Не удалось отправить уведомление пользователю {user_id}: {e}")
+
         # Получаем информацию для отчета
         team = get_team_by_id(team_id)
-        tasks = get_tasks_by_team(team_id)
+        
 
         task_list = '\n'.join([f'{i + 1}. {task.task_name[:30]}...' for i, task in enumerate(tasks)])
 
