@@ -2,7 +2,7 @@ from telebot import TeleBot
 from telebot import TeleBot
 from telebot.types import Message
 
-from database.dao import get_team_by_leader, get_team_by_code, update_team, get_current_chain
+from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code
 from database.models import Team, Task
 from msg_locale import QuestMessages, ButtonMessages
 
@@ -11,8 +11,11 @@ def register_quest_commands(bot: TeleBot):
     # Присоединение лидера к команде
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
     def join_team(message: Message):
-        team = get_team_by_leader(message.from_user.id)
-        if team:
+        print('join_team start')
+        member = get_member(message.from_user.id)
+        
+        if member:
+            team = get_team_by_id(team_id=member.team_id)
             bot.reply_to(message, QuestMessages.ALREADY_IN_TEAM.format(
                 team_name=team.team_name
             ))
@@ -20,32 +23,37 @@ def register_quest_commands(bot: TeleBot):
 
         msg = bot.reply_to(message, QuestMessages.ENTER_CODE_WORD)
         bot.register_next_step_handler(msg, process_team_join)
+        print('join_team end')
 
     def process_team_join(message: Message):
+        print('process_team_join start')
         code_word = message.text
         team = get_team_by_code(code_word)
         if not team:
             bot.reply_to(message, QuestMessages.TEAM_NOT_FOUND)
             return
 
-        if team.leader_id and team.leader_id != message.from_user.id:
-            bot.reply_to(message, QuestMessages.ALREADY_HAS_LEADER)
-            return
+        # if team.leader_id and team.leader_id != message.from_user.id:
+        #     bot.reply_to(message, QuestMessages.ALREADY_HAS_LEADER)
+        #     return
         else:
-            update_team(team_id=team.id, leader_id=message.from_user.id)
-            bot.reply_to(message, team.welcome_message or QuestMessages.BECOME_LEADER_DEFAULT)
+            join_team_via_code(code_word, user_id=message.from_user.id)
+            bot.reply_to(message, team.welcome_message)
 
         # Отправка первого задания
         current_chain = preprocess_task(message)
         if not current_chain:
             return
         send_task(message, current_chain.task)
+        print('process_team_join end')
 
     def preprocess_task(message: Message):
-        team = get_team_by_leader(message.from_user.id)
-        if not team:
-            bot.reply_to(message, QuestMessages.NOT_LEADER)
-            return
+        print('process_task start')
+        member = get_member(message.from_user.id)
+        team = get_team_by_id(member.team_id)
+        # if not team:
+        #     bot.reply_to(message, QuestMessages.NOT_LEADER)
+        #     return
 
         current_chain = get_current_chain(team.id, team.current_chain_order)
         if current_chain:
@@ -56,7 +64,9 @@ def register_quest_commands(bot: TeleBot):
             bot.send_message(message.chat.id, task_assist_message)
         else:
             bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS)
+        print('process_task end')
         return current_chain
+        
 
     # Отправка задания пользователю
     def send_task(message: Message, task: Task):
@@ -87,7 +97,7 @@ def register_quest_commands(bot: TeleBot):
     # Обработка перехода к следующему заданию
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.NEXT_TASK)
     def next_task(message: Message):
-        team = get_team_by_leader(message.from_user.id)
+        team = get_team_by_id(message.from_user.id)
         if not team:
             bot.reply_to(message, QuestMessages.NOT_LEADER)
             return

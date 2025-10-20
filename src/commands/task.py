@@ -80,6 +80,7 @@ def register_task_setting_commands(bot: TeleBot):
             TaskMessages.TASK_CREATED,
             reply_markup=render_main_menu(check_admin(bot, message, silent=True))
         )
+        state.delete()
 
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.LIST_TASK)
     def list_task(message: Message):

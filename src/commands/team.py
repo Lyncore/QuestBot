@@ -105,7 +105,7 @@ def register_team_setting_commands(bot: TeleBot):
                 team_name=team.team_name,
                 id=team.id
             )+"\n"+TeamMessages.TEAM_LINK.format(
-                team_link=f'https://t.me/{bot_username.replace('_', r'\_')[1:]}?start={team.invite_token}'
+                team_link=f"https://t.me/{bot_username.replace('_', r'\_')[1:]}?start={team.invite_token}"
                 ),
             reply_markup=render_main_menu(check_admin(bot, message, silent=True))
         )
