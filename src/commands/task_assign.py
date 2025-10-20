@@ -7,7 +7,7 @@ from buttons import render_task_assign_buttons, render_team_buttons
 from checks import check_admin
 from database.dao import get_teams, get_tasks, delete_chains_by_team, add_chains, get_team_by_id, get_tasks_by_team
 from database.models import Chain
-from locale import TaskMessages, CommonMessages, ButtonMessages
+from msg_locale import TaskMessages, CommonMessages, ButtonMessages
 
 
 def register_task_assign_commands(bot: TeleBot):

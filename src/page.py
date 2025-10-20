@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Page[T]:
+class Page:
     page: int
     total_count: int
-    items: [T]
+    items: []
