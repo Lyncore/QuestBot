@@ -15,10 +15,12 @@ from commands.task_assign import register_task_assign_commands
 from commands.quest import register_quest_commands
 from commands.auth import register_auth_commands, init_otp
 from database.database import create_tables
-from locale import CommonMessages, CommandDescription, ButtonMessages
+from msg_locale import CommonMessages, CommandDescription, ButtonMessages, QuestMessages
 from commands.team import register_team_setting_commands
 from commands.task import register_task_setting_commands
 from commands.team_reset import register_team_reset_commands
+
+from database.dao import join_team_via_invite_token, get_member
 
 totp = init_otp()
 state_storage = StateMemoryStorage()
@@ -34,12 +36,49 @@ bot.set_my_commands(commands=[BotCommand(cmd, desc) for cmd, desc in CommandDesc
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
+
+    print('Full text: ', message.text)
+    user_id = message.from_user.id
+    args = message.text.split()
+    invite_token = None
+
+    if len(args)>1:
+        try:
+            invite_token = str(args[1])
+            print(invite_token)
+        except: 
+            print("Invite token is none")
+            invite_token = None
     is_admin = check_admin(bot, message, silent=True)
-    bot.send_message(
-        message.chat.id,
-        CommonMessages.WELCOME_MESSAGE,
-        reply_markup=render_main_menu(is_admin)
-    )
+
+    if invite_token:
+        team = get_member(user_id)
+        
+        if team:
+            bot.send_message(
+                message.chat.id,
+                QuestMessages.ALREADY_IN_TEAM.format(
+                ),
+                reply_markup=render_main_menu(is_admin)
+            )
+        else:
+            team_name = join_team_via_invite_token(invite_token, user_id)
+            
+            print("joined")
+            bot.send_message(
+                message.chat.id,
+                QuestMessages.JOINED_TO_TEAM.format(
+                    team_name=team_name
+                ),
+                reply_markup=render_main_menu(is_admin)
+            )
+            
+    else:   
+        bot.send_message(
+            message.chat.id,
+            CommonMessages.WELCOME_MESSAGE, 
+            reply_markup=render_main_menu(is_admin)
+        )
 
 
 @bot.message_handler(state="*", func=lambda m: m.text == CommonMessages.CANCEL)

@@ -3,7 +3,7 @@ from typing import Type
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 
 from database.models import Task, Team
-from locale import CommonMessages, ButtonMessages
+from msg_locale import CommonMessages, ButtonMessages
 
 
 def render_main_menu(is_admin: bool = False):

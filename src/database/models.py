@@ -18,12 +18,20 @@ class Team(Base):
     id = Column(Integer, primary_key=True)
     team_name = Column(String(50), nullable=False)
     description = Column(Text)
-    leader_id = Column(BigInteger)
     code_word = Column(String(50), nullable=False)
     welcome_message = Column(Text)
     final_message = Column(Text)
     current_chain_order = Column(Integer, default=0)
+    invite_token = Column(String(11), nullable=False, unique=True)
     chains = relationship("Chain", back_populates="team")
+    members = relationship("TeamMember", back_populates="team")
+
+class TeamMember(Base):
+    __tablename__ = 'team_members'
+    id = Column(Integer, primary_key=True)
+    team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)
+    user_id = Column(BigInteger, nullable=False)
+    team = relationship("Team", back_populates="members")
 
 class Task(Base):
     __tablename__ = 'tasks'

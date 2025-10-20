@@ -6,7 +6,7 @@ from telebot import TeleBot
 from telebot.types import Message
 
 from database.dao import get_otp, set_otp, get_admin, add_admin
-from locale import AuthMessages
+from msg_locale import AuthMessages
 
 
 def init_otp():

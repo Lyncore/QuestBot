@@ -7,7 +7,7 @@ from buttons import render_cancel_button, render_main_menu, render_task_buttons
 from checks import check_admin
 from database.dao import add_task, get_tasks, get_task_by_id
 from database.models import Task
-from locale import TaskMessages, CommonMessages, ButtonMessages
+from msg_locale import TaskMessages, CommonMessages, ButtonMessages
 
 
 class TaskCreateState(StatesGroup):
