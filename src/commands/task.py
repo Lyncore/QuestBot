@@ -7,7 +7,7 @@ from buttons import render_cancel_button, render_main_menu, render_task_buttons
 from checks import check_admin
 from database.dao import add_task, get_tasks, get_task_by_id
 from database.models import Task
-from locale import TaskMessages, CommonMessages, ButtonMessages
+from msg_locale import TaskMessages, CommonMessages, ButtonMessages
 
 
 class TaskCreateState(StatesGroup):
@@ -80,6 +80,7 @@ def register_task_setting_commands(bot: TeleBot):
             TaskMessages.TASK_CREATED,
             reply_markup=render_main_menu(check_admin(bot, message, silent=True))
         )
+        state.delete()
 
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.LIST_TASK)
     def list_task(message: Message):

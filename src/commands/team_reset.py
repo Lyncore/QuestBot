@@ -4,7 +4,7 @@ from telebot.types import Message, CallbackQuery
 from buttons import render_team_buttons
 from checks import check_admin
 from database.dao import get_teams, update_team
-from locale import TeamMessages, CommonMessages, ButtonMessages
+from msg_locale import TeamMessages, CommonMessages, ButtonMessages
 
 
 def register_team_reset_commands(bot: TeleBot):

@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, joinedload
 
 from database.database import connection
-from database.models import Admin, OTPKey, Team, Task, Chain
+from database.models import Admin, OTPKey, Team, TeamMember, Task, Chain
 from page import Page
 
 
@@ -109,7 +109,48 @@ def get_team_by_code(session: Session, code_word: str) -> Optional[Team]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
+# --- Присоеднинение к команде по ссылке ---
+@connection
+def join_team_via_invite_token(session: Session, invite_token: str, user_id: int):
+    try:
+        team = session.query(Team).filter_by(invite_token=invite_token).first()
+        team_name = team.team_name
 
+        member = TeamMember(team_id=team.id, user_id=user_id)
+        session.add(member)
+        session.commit()
+        return team_name
+            
+    except SQLAlchemyError as e:
+        print(F'Error {e}')
+
+@connection
+def get_user_ids_by_team(session: Session, team_id: int) -> List[int]:
+    members = session.query(TeamMember).filter(TeamMember.team_id == team_id).all()
+    return [
+        member.user_id for member in members
+    ]
+
+@connection
+def join_team_via_code(session: Session, code_word: str, user_id: int):
+    try:
+        team = session.query(Team).filter_by(code_word=code_word).first()
+        team_name = team.team_name
+
+        member = TeamMember(team_id=team.id, user_id=user_id)
+        session.add(member)
+        session.commit()
+        return team_name
+            
+    except SQLAlchemyError as e:
+        print(F'Error {e}')
+@connection
+def get_member(session: Session, user_id: int):
+    try:
+        return session.query(TeamMember).filter_by(user_id=user_id).first()
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+        return None
 @connection
 def get_teams(session: Session, leader_only: bool = False, started_only: bool = False) -> List[Type[Team]]:
     try:

@@ -1,12 +1,13 @@
 from os import getenv
-
+import secrets
+import string
 import pyotp
 from pyotp import TOTP
 from telebot import TeleBot
 from telebot.types import Message
 
 from database.dao import get_otp, set_otp, get_admin, add_admin
-from locale import AuthMessages
+from msg_locale import AuthMessages
 
 
 def init_otp():
@@ -16,7 +17,6 @@ def init_otp():
         set_otp(otp_secret)
     print(f'OTP Secret: {otp_secret}')
     return pyotp.TOTP(otp_secret)
-
 
 def register_auth_commands(bot: TeleBot, totp: TOTP):
     # Аутентификация администратора
