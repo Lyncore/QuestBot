@@ -91,7 +91,7 @@ def register_quest_commands(bot: TeleBot):
     def next_task(message: Message):
         member = get_member(message.from_user.id)
         if not member:
-            bot.reply_to(message, "Вы не в команде.")
+            bot.reply_to(message, QuestMessages.NOT_IN_TEAM)
             return
         team = get_team_by_id(member.team_id)
 
