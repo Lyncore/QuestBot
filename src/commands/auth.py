@@ -1,5 +1,6 @@
 from os import getenv
-
+import secrets
+import string
 import pyotp
 from pyotp import TOTP
 from telebot import TeleBot
@@ -16,7 +17,6 @@ def init_otp():
         set_otp(otp_secret)
     print(f'OTP Secret: {otp_secret}')
     return pyotp.TOTP(otp_secret)
-
 
 def register_auth_commands(bot: TeleBot, totp: TOTP):
     # Аутентификация администратора

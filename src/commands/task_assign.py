@@ -7,7 +7,7 @@ from buttons import render_task_assign_buttons, render_team_buttons
 from checks import check_admin
 from database.dao import get_teams, get_tasks, delete_chains_by_team, add_chains, get_team_by_id, get_tasks_by_team
 from database.models import Chain
-from msg_locale import TaskMessages, CommonMessages, ButtonMessages
+from msg_locale import TaskMessages, CommonMessages, ButtonMessages, QuestMessages
 
 
 def register_task_assign_commands(bot: TeleBot):
@@ -119,10 +119,17 @@ def register_task_assign_commands(bot: TeleBot):
         chains = [Chain(team_id=team_id, task_id=task_id, order=order) for order, task_id in selected_tasks]
 
         add_chains(chains)
+        
+        team = get_team_by_id(team_id)
+        tasks = get_tasks_by_team(team_id)
+
+        if not tasks:
+            bot.edit_message_text("Нет заданий для отправки.", chat_id, message_id)
+            return
 
         # Получаем информацию для отчета
         team = get_team_by_id(team_id)
-        tasks = get_tasks_by_team(team_id)
+        
 
         task_list = '\n'.join([f'{i + 1}. {task.task_name[:30]}...' for i, task in enumerate(tasks)])
 
