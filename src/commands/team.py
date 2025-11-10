@@ -98,14 +98,15 @@ def register_team_setting_commands(bot: TeleBot):
                 team.code_word = message.text
                 team.invite_token = generate_invite_token(8)
                 add_team(team)
-
+        escaped_username = bot_username.replace('_', r'\_')[1:]
+        team_link = f"https://t.me/{escaped_username}?start={team.invite_token}"
         bot.reply_to(
             message,
             TeamMessages.TEAM_CREATED.format(
                 team_name=team.team_name,
                 id=team.id
             )+"\n"+TeamMessages.TEAM_LINK.format(
-                team_link=f"https://t.me/{bot_username.replace('_', r'\_')[1:]}?start={team.invite_token}"
+                team_link=team_link
                 ),
             reply_markup=render_main_menu(check_admin(bot, message, silent=True))
         )
@@ -133,7 +134,9 @@ def register_team_setting_commands(bot: TeleBot):
         current_task = (team.current_chain_order + 1) if list(
             filter(lambda x: x.order == team.current_chain_order,
                    team.chains)) else TeamMessages.TEAM_TASKS_COMPLETED
-
+        
+        escaped_username = bot_username.replace('_', r'\_')[1:]
+        team_link = f"https://t.me/{escaped_username}?start={team.invite_token}"
         msg = TeamMessages.TEAM_ITEM_TEMPLATE.format(
             id=team.id,
             team_name=team.team_name,
@@ -142,7 +145,7 @@ def register_team_setting_commands(bot: TeleBot):
             final=team.final_message or CommonMessages.NO,
             current_task=current_task,
             code=team.code_word,
-            link = f'https://t.me/{bot_username.replace('_', r'\_')[1:]}?start={team.invite_token}'
+            link = team_link
         )
         chat_id = call.message.chat.id
         message_id = call.message.message_id

@@ -4,3 +4,4 @@ pyTelegramBotAPI==4.26.0
 python-dotenv==1.0.1
 pyyaml==6.0.2
 SQLAlchemy==2.0.38
+alembic==1.17.1
