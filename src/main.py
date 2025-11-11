@@ -110,7 +110,7 @@ register_quest_commands(bot)
 
 @bot.message_handler(func=lambda m: True)
 def echo_all(message):
-    bot.reply_to(
+    bot.reply_to( 
         message,
         CommonMessages.COMMON_MESSAGE,
         reply_markup=render_main_menu(check_admin(bot, message, silent=True))

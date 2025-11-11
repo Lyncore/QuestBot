@@ -10,7 +10,7 @@ from telebot.types import Message, CallbackQuery
 
 from buttons import render_team_buttons, render_cancel_button, render_main_menu
 from checks import check_admin
-from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name
+from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name, edit_team
 from database.models import Team
 from msg_locale import TeamMessages, CommonMessages, ButtonMessages
 
@@ -130,13 +130,18 @@ def register_team_setting_commands(bot: TeleBot):
         team_id = int(call.data.split('_')[-1])
 
         team = get_team_by_id(team_id)
+        print("generating message")
+        if team.invite_token is None:
+            invite_token = generate_invite_token(8)
+            edit_team(team_id, 'invite_token', invite_token)
+
 
         current_task = (team.current_chain_order + 1) if list(
             filter(lambda x: x.order == team.current_chain_order,
                    team.chains)) else TeamMessages.TEAM_TASKS_COMPLETED
         
         escaped_username = bot_username.replace('_', r'\_')[1:]
-        team_link = f"https://t.me/{escaped_username}?start={team.invite_token}"
+        team_link = f"https://t.me/{escaped_username}?start={invite_token}"
         msg = TeamMessages.TEAM_ITEM_TEMPLATE.format(
             id=team.id,
             team_name=team.team_name,

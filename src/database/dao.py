@@ -79,6 +79,16 @@ def update_team(
 
 
 @connection
+def edit_team(session: Session, team_id: int, target: str, value):                          
+    try: 
+        team = session.query(Team).filter_by(id=team_id).first()
+        setattr(team, target, value)
+        session.commit()
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
+        session.rollback()
+
+@connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
     try:
         return session.query(Team).options(joinedload(Team.chains)).get(team_id)
