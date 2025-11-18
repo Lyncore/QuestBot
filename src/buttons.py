@@ -3,7 +3,7 @@ from typing import Type
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 
 from database.models import Task, Team
-from msg_locale import CommonMessages, ButtonMessages
+from msg_locale import CommonMessages, ButtonMessages, EditTeamButtonMessages
 
 
 def render_main_menu(is_admin: bool = False):
@@ -34,12 +34,20 @@ def render_main_menu(is_admin: bool = False):
     return markup
 
 
-def render_cancel_button(add_skip: bool = False):
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(CommonMessages.CANCEL)
-    if add_skip:
-        markup.add(CommonMessages.SKIP)
-    return markup
+def render_cancel_button(add_skip: bool = False, inline: bool = False):
+    
+    if inline:
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton(CommonMessages.CANCEL, callback_data="cancel"))
+
+        return markup
+
+    else:
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(CommonMessages.CANCEL)
+        if add_skip:
+            markup.add(CommonMessages.SKIP)
+        return markup
 
 
 def render_team_buttons(
@@ -62,6 +70,23 @@ def render_team_buttons(
     markup.add(InlineKeyboardButton(CommonMessages.CANCEL, callback_data=callback_cancel))
     return markup
 
+# reply клавиатура для выбора атрибутов команды которые вы хотите изменить
+def render_team_edit_buttons(team_id: int):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(
+        EditTeamButtonMessages.NAME,
+        EditTeamButtonMessages.DESCRIPTION
+    )
+    markup.add(
+        EditTeamButtonMessages.WELCOOME,
+        EditTeamButtonMessages.FINAL
+    )
+    markup.add(
+        EditTeamButtonMessages.CODE_WORD,
+        CommonMessages.CANCEL
+    )
+
+    return markup
 
 def render_task_buttons(
         tasks: list[Type[Task]],
