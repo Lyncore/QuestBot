@@ -213,6 +213,12 @@ def register_team_edit_commands(bot: TeleBot):
             reply_markup=render_team_edit_buttons(team_id)
         )
 
+    @bot.callback_query_handler(func=lambda call:call.data.startswith('cancel_team_edit'))
+    def cancel_team_edit_list(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+
+        bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
 
 
     # ======== Обработчики для каждой кнопки ========
