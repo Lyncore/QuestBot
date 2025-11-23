@@ -111,12 +111,8 @@ def render_task_edit_buttons(task_id: int):
         EditTaskButtonMessages.DESCRIPTION
     )
     markup.add(
-        EditTaskButtonMessages.PHOTO,
-        EditTaskButtonMessages.STICKER
-    )
-    markup.add(
-        EditTaskButtonMessages.STICKER,
-        EditTaskButtonMessages.ANIMATION
+        EditTaskButtonMessages.MEDIA,
+        EditTaskButtonMessages.LOCATION
     )
     markup.add(
         EditTaskButtonMessages.CODE_WORD,

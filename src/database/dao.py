@@ -92,7 +92,7 @@ def edit_team(session: Session, team_id: int, field: str, value):
 @connection
 def edit_task(session: Session, task_id: int, field: str, value):
     try:
-        task = session.qury(Team).filter_by(id=task_id).first
+        task = session.query(Task).filter_by(id=task_id).first()
         setattr(task, field, value)
         session.commit()
     except SQLAlchemyError as e:
