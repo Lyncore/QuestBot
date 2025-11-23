@@ -77,7 +77,7 @@ def update_team(
         print(f'Error {e}')
         session.rollback()
 
-# Метод в который может менять любой атрибут команды
+# Метод меняющий любой атрибут команды
 @connection
 def edit_team(session: Session, team_id: int, field: str, value):                          
     try: 
@@ -87,6 +87,16 @@ def edit_team(session: Session, team_id: int, field: str, value):
     except SQLAlchemyError as e:
         print(f'Error: {e}')
         session.rollback()
+        
+# Метод меняющий любой атрибут задания
+@connection
+def edit_task(session: Session, task_id: int, field: str, value):
+    try:
+        task = session.qury(Team).filter_by(id=task_id).first
+        setattr(task, field, value)
+        session.commit()
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
 
 @connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:

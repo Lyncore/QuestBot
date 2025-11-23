@@ -17,7 +17,7 @@ from commands.auth import register_auth_commands, init_otp
 from database.database import create_tables
 from msg_locale import CommonMessages, CommandDescription, ButtonMessages, QuestMessages
 from commands.team import register_team_setting_commands, register_team_edit_commands
-from commands.task import register_task_setting_commands
+from commands.task import register_task_setting_commands, register_task_edit_commands
 from commands.team_reset import register_team_reset_commands
 
 from database.dao import join_team_via_invite_token, get_member
@@ -104,6 +104,7 @@ register_team_setting_commands(bot)
 register_team_edit_commands(bot)
 register_team_reset_commands(bot)
 register_task_setting_commands(bot)
+register_task_edit_commands(bot)
 register_task_assign_commands(bot)
 register_quest_commands(bot)
 

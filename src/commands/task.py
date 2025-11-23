@@ -1,13 +1,14 @@
+from collections import defaultdict
 from telebot import TeleBot
 from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
 from telebot.types import Message, CallbackQuery, InputMedia, InputMediaAnimation, InputMediaPhoto
 
-from buttons import render_cancel_button, render_main_menu, render_task_buttons
+from buttons import render_cancel_button, render_main_menu, render_task_buttons, render_task_edit_buttons
 from checks import check_admin
-from database.dao import add_task, get_tasks, get_task_by_id
+from database.dao import add_task, edit_task, get_tasks, get_task_by_id
 from database.models import Task
-from msg_locale import TaskMessages, CommonMessages, ButtonMessages
+from msg_locale import TaskMessages, CommonMessages, ButtonMessages, QuestMessages, EditTaskButtonMessages
 
 
 class TaskCreateState(StatesGroup):
@@ -17,6 +18,12 @@ class TaskCreateState(StatesGroup):
     location = State()
     code = State()
 
+class TaskEditState(StatesGroup):
+    waiting_for_name = State()
+    waiting_for_description = State()
+    waiting_for_media = State()
+    waiting_for_location = State()
+    waiting_for_code = State()
 
 def register_task_setting_commands(bot: TeleBot):
     # Создание задания (админ)
@@ -134,3 +141,53 @@ def register_task_setting_commands(bot: TeleBot):
         message_id = call.message.message_id
 
         bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
+
+
+def register_task_edit_commands(bot: TeleBot):
+    temp_data = defaultdict(dict)
+
+
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.EDIT_TASK)
+    def update_task_info(message: Message):
+        is_admin = check_admin(bot, message)
+        if not is_admin:
+            return
+        
+        tasks = get_tasks()
+        if not tasks:
+            bot.reply_to(message, TaskMessages.NO_TASKS)
+
+        markup = render_task_buttons(
+            tasks,
+            callback_finish='edit_task',
+            callback_cancel='cancel_task_edit'
+        )
+        bot.send_message(message.chat.id, TaskMessages.EDIT_TASK_SELECT, reply_markup=markup)
+
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('edit_task_'))
+    def process_task_selection(call:CallbackQuery):
+        chat_id = call.message.chat.id
+        task_id = int(call.data.split('_')[-1])
+
+        task = get_task_by_id(task_id)
+        if not task:
+            bot.answer_callback_query(call.id, QuestMessages.TASK_NOT_FOUND)
+            return      
+
+        temp_data[chat_id]["task_id"] = task_id
+
+        bot.delete_message(chat_id, call.message.message_id)
+        bot.send_message(
+            chat_id=chat_id,
+            text=EditTaskButtonMessages.CHOOSE_PROPERTY.format(task_name = task.task_name),
+            reply_markup=render_task_edit_buttons(task_id)
+        )
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('cancel_task_edit'))
+    def cancel_task_edit_list(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+
+        bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
+

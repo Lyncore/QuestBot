@@ -3,7 +3,7 @@ from typing import Type
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 
 from database.models import Task, Team
-from msg_locale import CommonMessages, ButtonMessages, EditTeamButtonMessages
+from msg_locale import CommonMessages, ButtonMessages, EditTeamButtonMessages, EditTaskButtonMessages
 
 
 def render_main_menu(is_admin: bool = False):
@@ -104,6 +104,26 @@ def render_task_buttons(
     markup.add(InlineKeyboardButton(CommonMessages.CANCEL, callback_data=callback_cancel))
     return markup
 
+def render_task_edit_buttons(task_id: int):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(
+        EditTaskButtonMessages.NAME,
+        EditTaskButtonMessages.DESCRIPTION
+    )
+    markup.add(
+        EditTaskButtonMessages.PHOTO,
+        EditTaskButtonMessages.STICKER
+    )
+    markup.add(
+        EditTaskButtonMessages.STICKER,
+        EditTaskButtonMessages.ANIMATION
+    )
+    markup.add(
+        EditTaskButtonMessages.CODE_WORD,
+        CommonMessages.CANCEL
+    )
+
+    return markup
 
 def render_task_assign_buttons(
         tasks: list[Type[Task]],

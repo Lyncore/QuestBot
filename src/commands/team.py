@@ -324,7 +324,7 @@ def register_team_edit_commands(bot: TeleBot):
         
         bot.send_message(
             chat_id, 
-            EditTeamButtonMessages.SAVED_DATA, 
+            CommonMessages.SAVED_DATA, 
             reply_markup=render_main_menu(is_admin=True)
         )
         
