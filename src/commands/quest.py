@@ -91,7 +91,7 @@ def register_quest_commands(bot: TeleBot):
     def next_task(message: Message):
         member = get_member(message.from_user.id)
         if not member:
-            bot.reply_to(message, "Вы не в команде.")
+            bot.reply_to(message, QuestMessages.NOT_IN_TEAM)
             return
         team = get_team_by_id(member.team_id)
 
@@ -113,16 +113,20 @@ def register_quest_commands(bot: TeleBot):
         next_order = team.current_chain_order + 1
         update_team(team_id=team.id, current_chain_order=next_order)
 
+        all_members = get_user_ids_by_team(team.id)
         next_chain = get_current_chain(team.id, next_order)
         if not next_chain:
-            bot.reply_to(message, team.final_message or QuestMessages.QUEST_COMPLETED)
+            for user_id in all_members:
+                try:
+                    bot.send_message(user_id, team.final_message or QuestMessages.QUEST_COMPLETED)
+                except Exception as e:
+                    print(f"Не удалось отправить финальное сообщение пользователю {user_id}: {e}")    
             return
             
         task = next_chain.task
         bot.reply_to(message, QuestMessages.TEAM_NEXT_TASK_MESSAGE)
         send_task(who_solved, task)
 
-        all_members = get_user_ids_by_team(team.id)
         for user_id in all_members:
             try:
                 if user_id != who_solved:
