@@ -1,6 +1,6 @@
 from os import getenv
 from dotenv import load_dotenv
-
+from collections import defaultdict
 import secrets
 import string
 from telebot import TeleBot
@@ -8,11 +8,11 @@ from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
 from telebot.types import Message, CallbackQuery
 
-from buttons import render_team_buttons, render_cancel_button, render_main_menu
+from buttons import render_team_buttons, render_cancel_button, render_main_menu, render_team_edit_buttons
 from checks import check_admin
-from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name
+from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name, edit_team, get_all_teams
 from database.models import Team
-from msg_locale import TeamMessages, CommonMessages, ButtonMessages
+from msg_locale import TeamMessages, CommonMessages, ButtonMessages, EditTeamButtonMessages
 
 
 
@@ -29,7 +29,13 @@ class TeamCreateState(StatesGroup):
     final = State()
     code = State()
 
-
+class TeamEditState(StatesGroup):
+    waiting_for_name = State()
+    waiting_for_description = State()
+    waiting_for_welcome = State()
+    waiting_for_final = State()
+    waiting_for_code_word = State()
+    
 class TeamSelectState(State):
     pass
 
@@ -86,9 +92,6 @@ def register_team_setting_commands(bot: TeleBot):
             if team_id:
                 team = get_team_by_id(team_id)
 
-
-
-                pass
             else:
                 team = Team()
                 team.team_name = data.get('team_name')
@@ -130,6 +133,11 @@ def register_team_setting_commands(bot: TeleBot):
         team_id = int(call.data.split('_')[-1])
 
         team = get_team_by_id(team_id)
+        # Генерация токена для команд у которых его нет
+        if team.invite_token is None:
+            team.invite_token = generate_invite_token(8)
+            edit_team(team_id, 'invite_token', team.invite_token)
+
 
         current_task = (team.current_chain_order + 1) if list(
             filter(lambda x: x.order == team.current_chain_order,
@@ -157,3 +165,274 @@ def register_team_setting_commands(bot: TeleBot):
         message_id = call.message.message_id
 
         bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
+
+
+# --------- Редактирование команды ---------
+def register_team_edit_commands(bot: TeleBot):
+    temp_data = defaultdict(dict)
+
+
+    # Сообщение со всем списком команд для изменения
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.EDIT_TEAM)
+    def update_team_info(message: Message):
+        is_admin = check_admin(bot, message)
+        if not is_admin:
+            return
+        teams = get_teams()
+        if not teams:
+            bot.reply_to(message, TeamMessages.NO_TEAMS)
+            return
+
+        markup = render_team_buttons(
+            teams,
+            callback_finish='edit_team',
+            callback_cancel='cancel_team_edit'
+        )
+        bot.send_message(message.chat.id, TeamMessages.EDIT_TEAM_SELECT, reply_markup=markup)
+
+
+    # Сохранения id выбранной команды
+    # Вывод клавиатуры с атрибутами команды, которые можно изменить: название, описание, welcome, final, кодовое слово
+    @bot.callback_query_handler(func=lambda call: call.data.startswith('edit_team_'))
+    def process_team_selection(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        team_id = int(call.data.split('_')[-1])
+
+        team = get_team_by_id(team_id)
+        if not team:
+            bot.answer_callback_query(call.id, EditTeamButtonMessages.TEAM_NOT_FOUND)
+            return
+        
+        # Сохранение team_id во временные данные
+        temp_data[chat_id]["team_id"] = team_id
+
+        bot.delete_message(chat_id, call.message.message_id)
+        bot.send_message(
+            chat_id=chat_id,
+            text=EditTeamButtonMessages.CHOOSE_PROPERTY.format(team_name=team.team_name),
+            reply_markup=render_team_edit_buttons(team_id)
+        )
+
+    @bot.callback_query_handler(func=lambda call:call.data.startswith('cancel_team_edit'))
+    def cancel_team_edit_list(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
+
+        bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
+
+
+    # ======== Обработчики для каждой кнопки ========
+
+    # Установка состояния для редактирования НАЗВАНИЯ команды
+    @bot.message_handler(func=lambda m: m.text == EditTeamButtonMessages.NAME)
+    def edit_team_name(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        # Проверка выбрана ли задача
+        if chat_id not in temp_data or "team_id" not in temp_data[chat_id]:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_SET)
+            return
+            
+        # Установка состояния
+        state.set(TeamEditState.waiting_for_name)
+        bot.send_message(chat_id, EditTeamButtonMessages.EDIT_NAME)
+
+    # Cохранение значения в БД
+    @bot.message_handler(state=TeamEditState.waiting_for_name, content_types=['text', 'animation', 'sticker', 'photo', 'video'])
+    def process_edit_name(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        team_id = temp_data[chat_id].get("team_id")
+
+        if not team_id:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_FOUND)
+            state.delete()
+            return
+        
+        if message.content_type == 'text':
+
+            # Обновление поле в базе данных
+            edit_team(team_id, "team_name", message.text)
+
+            bot.send_message(
+                chat_id, 
+                CommonMessages.SAVED_DATA, 
+                reply_markup=render_main_menu(is_admin=True)
+            )
+
+            # Очистка состояния и временных данных
+            state.delete()
+            temp_data.pop(chat_id, None)
+        else:
+            bot.send_message(chat_id, EditTeamButtonMessages.INVALID_TEXT)
+
+
+    # Установка состояния для редактирования ОПИСАНИЯ команды
+    @bot.message_handler(func=lambda m: m.text == EditTeamButtonMessages.DESCRIPTION)
+    def edit_team_description(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        if chat_id not in temp_data or "team_id" not in temp_data[chat_id]:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_SET)
+            return
+         
+        state.set(TeamEditState.waiting_for_description)
+
+        bot.send_message(chat_id, EditTeamButtonMessages.EDIT_DESCRIPTION)
+
+    # Cохранение значения в БД
+    @bot.message_handler(state=TeamEditState.waiting_for_description, content_types=['text', 'animation', 'sticker', 'photo', 'video'])
+    def process_edit_description(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        team_id = temp_data[chat_id].get("team_id")
+
+        if not team_id:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_FOUND)
+            state.delete()
+            return
+        
+        if message.content_type == 'text':
+            # Обновление поле в базе данных
+            edit_team(team_id, "description", message.text)
+            
+            bot.send_message(
+                chat_id, 
+                CommonMessages.SAVED_DATA, 
+                reply_markup=render_main_menu(is_admin=True)
+            )
+        
+            # Очистка состояния и временных данных
+            state.delete()
+            temp_data.pop(chat_id, None)
+
+        else:
+            bot.send_message(chat_id, EditTeamButtonMessages.INVALID_TEXT)
+
+
+    # Установка состояния для редактирования WELCOME СООБЩЕНИЯ команды
+    @bot.message_handler(func=lambda m: m.text == EditTeamButtonMessages.WELCOOME)
+    def edit_team_welcome(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        if chat_id not in temp_data or "team_id" not in temp_data[chat_id]:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_SET)
+            return
+        
+        state.set(TeamEditState.waiting_for_welcome)
+
+        bot.send_message(chat_id, EditTeamButtonMessages.EDIT_WELCOME)
+
+    # Cохранение значения в БД
+    @bot.message_handler(state=TeamEditState.waiting_for_welcome, content_types=['text', 'animation', 'sticker', 'photo', 'video'])
+    def process_edit_welcome(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        team_id = temp_data[chat_id].get("team_id")
+
+        if not team_id:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_FOUND)
+            state.delete()
+            return
+        
+        if message.content_type == 'text':
+            # Обновление поле в базе данных
+            edit_team(team_id, "welcome_message", message.text)
+            
+            bot.send_message(
+                chat_id, 
+                CommonMessages.SAVED_DATA, 
+                reply_markup=render_main_menu(is_admin=True)
+            )
+            
+            # Очистка состояния и временных данных
+            state.delete()
+            temp_data.pop(chat_id, None)
+        else:
+            bot.send_message(chat_id, EditTeamButtonMessages.INVALID_TEXT)
+
+
+    # Установка состояния для редактирования WELCOME СООБЩЕНИЯ команды
+    @bot.message_handler(func=lambda m: m.text == EditTeamButtonMessages.FINAL)
+    def edit_team_final(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        if chat_id not in temp_data or "team_id" not in temp_data[chat_id]:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_SET)
+            return
+        
+        state.set(TeamEditState.waiting_for_final)
+
+        bot.send_message(chat_id, EditTeamButtonMessages.EDIT_FINAL)
+
+    # Cохранение значения в БД
+    @bot.message_handler(state=TeamEditState.waiting_for_final, content_types=['text', 'animation', 'sticker', 'photo', 'video'])
+    def process_edit_final(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        team_id = temp_data[chat_id].get("team_id")
+
+        if not team_id:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_FOUND)
+            state.delete()
+            return
+        
+        if message.content_type == 'text':
+            # Обновление поле в базе данных
+            edit_team(team_id, "final_message", message.text)
+            
+            bot.send_message(
+                chat_id, 
+                CommonMessages.SAVED_DATA, 
+                reply_markup=render_main_menu(is_admin=True)
+            )
+            
+            # Очистка состояния и временных данных
+            state.delete()
+            temp_data.pop(chat_id, None)
+        else:
+            bot.send_message(chat_id, EditTeamButtonMessages.INVALID_TEXT)
+
+
+    # Установка состояния для редактирования FINAL СООБЩЕНИЯ команды
+    @bot.message_handler(func=lambda m: m.text == EditTeamButtonMessages.CODE_WORD)
+    def edit_team_codeword(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        if chat_id not in temp_data or "team_id" not in temp_data[chat_id]:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_SET)
+            return
+ 
+        state.set(TeamEditState.waiting_for_code_word)
+        
+        bot.send_message(chat_id, EditTeamButtonMessages.EDIT_CODEWORD)
+    
+    # Cохранение значения в БД
+    @bot.message_handler(state=TeamEditState.waiting_for_code_word, content_types=['text', 'animation', 'sticker', 'photo', 'video'])
+    def process_edit_code_word(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        team_id = temp_data[chat_id].get("team_id")
+
+        if not team_id:
+            bot.send_message(chat_id, EditTeamButtonMessages.TEAM_NOT_FOUND)
+            state.delete()
+            return
+        
+        if message.content_type == 'text':
+            # Обновление поле в базе данных
+            edit_team(team_id, "code_word", message.text)
+            
+            bot.send_message(
+                chat_id, 
+                CommonMessages.SAVED_DATA, 
+                reply_markup=render_main_menu(is_admin=True)
+            )
+            
+            # Очистка состояния и временных данных
+            state.delete()
+            temp_data.pop(chat_id, None)
+        else:
+            bot.send_message(chat_id, EditTeamButtonMessages.INVALID_TEXT)
+    
+    @bot.message_handler(func=lambda m:m.text == CommonMessages.CANCEL)
+    def cancel_team_edit(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        bot.send_message(
+            chat_id,
+            CommonMessages.CANCEL_EDIT,
+            reply_markup=render_main_menu(is_admin=True)
+        )
+
+        state.delete()
+        temp_data.pop(chat_id, None)
