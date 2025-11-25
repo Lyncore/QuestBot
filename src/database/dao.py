@@ -77,6 +77,26 @@ def update_team(
         print(f'Error {e}')
         session.rollback()
 
+# Метод меняющий любой атрибут команды
+@connection
+def edit_team(session: Session, team_id: int, field: str, value):                          
+    try: 
+        team = session.query(Team).filter_by(id=team_id).first()
+        setattr(team, field, value)
+        session.commit()
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
+        session.rollback()
+        
+# Метод меняющий любой атрибут задания
+@connection
+def edit_task(session: Session, task_id: int, field: str, value):
+    try:
+        task = session.query(Task).filter_by(id=task_id).first()
+        setattr(task, field, value)
+        session.commit()
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
 
 @connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
@@ -165,6 +185,15 @@ def get_teams(session: Session, leader_only: bool = False, started_only: bool = 
         print(f'Error {e}')
         return []
 
+@connection
+def get_all_teams(session: Session) -> List[Type[Team]]:
+    try:
+        query = session.query(Team)
+        teams = query.all()
+        return teams
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
+        return []
 
 @connection
 def get_teams_paged(session: Session, page: int = 0, limit: int = 10) -> Optional[Page]:
