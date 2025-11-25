@@ -8,10 +8,9 @@ from msg_locale import QuestMessages, ButtonMessages
 
 
 def register_quest_commands(bot: TeleBot):
-    # Присоединение лидера к команде
+    # Присоединение к команде
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
     def join_team(message: Message):
-        print('join_team start')
         member = get_member(message.from_user.id)
         
         if member:
@@ -23,10 +22,9 @@ def register_quest_commands(bot: TeleBot):
 
         msg = bot.reply_to(message, QuestMessages.ENTER_CODE_WORD)
         bot.register_next_step_handler(msg, process_team_join)
-        print('join_team end')
+
 
     def process_team_join(message: Message):
-        print('process_team_join start')
         code_word = message.text
         team = get_team_by_code(code_word)
         if not team:
@@ -42,10 +40,8 @@ def register_quest_commands(bot: TeleBot):
         if not current_chain:
             return
         send_task(message, current_chain.task)
-        print('process_team_join end')
 
     def preprocess_task(message: Message):
-        print('process_task start')
         member = get_member(message.from_user.id)
         team = get_team_by_id(member.team_id)
 
@@ -59,7 +55,6 @@ def register_quest_commands(bot: TeleBot):
         else:
             print('current chain is false')
             bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS)
-        print('process_task end')
         return current_chain
         
     # Отправка задания пользователю

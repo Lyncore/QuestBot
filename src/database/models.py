@@ -22,7 +22,7 @@ class Team(Base):
     welcome_message = Column(Text)
     final_message = Column(Text)
     current_chain_order = Column(Integer, default=0)
-    invite_token = Column(String(11), nullable=False, unique=True)
+    invite_token = Column(String(11), nullable=True, unique=True)
     chains = relationship("Chain", back_populates="team")
     members = relationship("TeamMember", back_populates="team")
 

@@ -37,6 +37,7 @@ def register_team_reset_commands(bot: TeleBot):
 
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.RESET_TASK)
     def reset_task(message: Message):
+        print("reset_task")
         if not check_admin(bot, message):
             return
 
