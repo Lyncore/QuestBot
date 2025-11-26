@@ -77,6 +77,22 @@ def update_team(
         print(f'Error {e}')
         session.rollback()
 
+
+# Удаление команды из бд
+@connection
+def delete_team(session: Session, team_id: int):
+    try:
+        member = session.query(TeamMember).filter_by(team_id=team_id).delete()
+        chains = session.query(Chain).filter_by(team_id=team_id).delete()
+        team = session.query(Team).filter_by(id=team_id).delete()
+        session.commit()
+        return True
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+        session.rollback()
+        return False
+
+
 # Метод меняющий любой атрибут команды
 @connection
 def edit_team(session: Session, team_id: int, field: str, value):                          
@@ -97,6 +113,18 @@ def edit_task(session: Session, task_id: int, field: str, value):
         session.commit()
     except SQLAlchemyError as e:
         print(f'Error: {e}')
+
+@connection
+def delete_task(session: Session, task_id: int):
+    try:
+        chains = session.query(Chain).filter_by(task_id=task_id).delete()
+        task = session.query(Task).filter_by(id=task_id).delete()
+        session.commit()
+        return True
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
+        session.rollback()
+        return False
 
 @connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
