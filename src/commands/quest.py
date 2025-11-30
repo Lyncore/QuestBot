@@ -76,6 +76,10 @@ def register_quest_commands(bot: TeleBot):
 
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.CURRENT_TASK)
     def get_task(message: Message):
+        member = get_member(message.from_user.id)
+        if not member:
+            bot.reply_to(message, QuestMessages.NOT_IN_TEAM)
+            return
         current_chain = preprocess_task(message)
         if not current_chain:
             return
