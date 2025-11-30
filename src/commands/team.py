@@ -315,10 +315,17 @@ def register_team_edit_commands(bot: TeleBot):
             state.delete()
             return
         
+        new_team_name = message.text
+        
+        team = get_team_by_name(message.text)
+        if team:
+            bot.reply_to(message, TeamMessages.TEAM_NAME_EXISTS, reply_markup=render_cancel_button())
+            return
+        
         if message.content_type == 'text':
 
             # Обновление поле в базе данных
-            edit_team(team_id, "team_name", message.text)
+            edit_team(team_id, "team_name", new_team_name)
 
             bot.send_message(
                 chat_id, 
