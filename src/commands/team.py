@@ -319,8 +319,12 @@ def register_team_edit_commands(bot: TeleBot):
         
         team = get_team_by_name(message.text)
         if team:
-            bot.reply_to(message, TeamMessages.TEAM_NAME_EXISTS, reply_markup=render_cancel_button())
-            return
+            if team.id == team_id:
+                bot.reply_to(message, TeamMessages.TEAM_NAME_SAME, reply_markup=render_cancel_button())
+                return
+            else:
+                bot.reply_to(message, TeamMessages.TEAM_NAME_EXISTS, reply_markup=render_cancel_button())
+                return
         
         if message.content_type == 'text':
 
