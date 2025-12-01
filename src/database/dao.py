@@ -173,12 +173,11 @@ def get_team_by_code(session: Session, code_word: str) -> Optional[Team]:
 def join_team_via_invite_token(session: Session, invite_token: str, user_id: int):
     try:
         team = session.query(Team).filter_by(invite_token=invite_token).first()
-        team_name = team.team_name
 
         member = TeamMember(team_id=team.id, user_id=user_id)
         session.add(member)
         session.commit()
-        return team_name
+        return team
             
     except SQLAlchemyError as e:
         print(F'Error {e}')
@@ -194,22 +193,25 @@ def get_user_ids_by_team(session: Session, team_id: int) -> List[int]:
 def join_team_via_code(session: Session, code_word: str, user_id: int):
     try:
         team = session.query(Team).filter_by(code_word=code_word).first()
-        team_name = team.team_name
 
         member = TeamMember(team_id=team.id, user_id=user_id)
         session.add(member)
         session.commit()
-        return team_name
+        return team
             
     except SQLAlchemyError as e:
         print(F'Error {e}')
+
+# Присоединение к команде
 @connection
 def get_member(session: Session, user_id: int):
     try:
-        return session.query(TeamMember).filter_by(user_id=user_id).first()
+        member = session.query(TeamMember).filter_by(user_id=user_id).first()
+        return member
     except SQLAlchemyError as e:
         print(f'Error {e}')
         return None
+    
 @connection
 def get_teams(session: Session, leader_only: bool = False, started_only: bool = False) -> List[Type[Team]]:
     try:

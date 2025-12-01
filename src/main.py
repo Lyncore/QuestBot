@@ -20,7 +20,8 @@ from commands.team import register_team_setting_commands, register_team_edit_com
 from commands.task import register_task_setting_commands, register_task_edit_commands
 from commands.team_reset import register_team_reset_commands
 
-from database.dao import join_team_via_invite_token, get_member
+from database.dao import join_team_via_invite_token, get_member, get_team_by_id, get_current_chain
+from database.models import Task, Team
 
 totp = init_otp()
 state_storage = StateMemoryStorage()
@@ -38,6 +39,7 @@ bot.set_my_commands(commands=[BotCommand(cmd, desc) for cmd, desc in CommandDesc
 def start_message(message):
     print('Full text: ', message.text)
     user_id = message.from_user.id
+    chat_id = message.chat.id
     args = message.text.split()
     invite_token = None
 
@@ -50,28 +52,63 @@ def start_message(message):
             invite_token = None
     is_admin = check_admin(bot, message, silent=True)
 
-    if invite_token:
-        team = get_member(user_id)
-        
-        if team:
-            bot.send_message(
-                message.chat.id,
-                QuestMessages.ALREADY_IN_TEAM.format(
-                ),
-                reply_markup=render_main_menu(is_admin)
-            )
+    def preprocess_task(message: Message, team: Team):
+
+        current_chain = get_current_chain(team.id, team.current_chain_order)
+        if current_chain:
+            if team.current_chain_order == 0:
+                task_assist_message = QuestMessages.FIRST_TASK_MESSAGE
+            else:
+                task_assist_message = QuestMessages.CURRENT_TASK_MESSAGE
+                bot.send_message(message.chat.id, task_assist_message)
         else:
-            team_name = join_team_via_invite_token(invite_token, user_id)
-            
-            print("joined")
+            print('current chain is false')
+            bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS)
+            return current_chain
+
+    def send_task(chat_id: int, task: Task):
+        bot.send_message(chat_id, QuestMessages.TASK_TEMPLATE.format(
+            task_name=task.task_name,
+            description=task.description
+        ))
+        if task.photo:
+            bot.send_photo(chat_id, task.photo, caption=task.description)
+        if task.animation:
+            bot.send_animation(chat_id, task.animation)
+        if task.sticker:
+            bot.send_sticker(chat_id, task.sticker)
+        if task.location:
+            bot.send_message(chat_id, QuestMessages.LOCATION_TEMPLATE.format(
+                location=task.location
+            ))
+
+    if invite_token:
+
+        member = get_member(user_id)
+        if member:
+            team = get_team_by_id(member.team_id)
             bot.send_message(
-                message.chat.id,
+                chat_id,
+                QuestMessages.ALREADY_IN_TEAM.format(
+                    team_name=team.team_name                    ),
+                    reply_markup=render_main_menu(is_admin)
+                ) 
+        else:
+            team = join_team_via_invite_token(invite_token, user_id)
+            
+            bot.send_message(
+                chat_id,
                 QuestMessages.JOINED_TO_TEAM.format(
-                    team_name=team_name
+                    team_name=team.team_name
                 ),
                 reply_markup=render_main_menu(is_admin)
             )
-            
+
+            current_chain = preprocess_task(message, team)
+            if not current_chain:
+                return
+            send_task(chat_id, current_chain.task)
+
     else:   
         bot.send_message(
             message.chat.id,

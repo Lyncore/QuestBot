@@ -39,7 +39,7 @@ def register_quest_commands(bot: TeleBot):
         current_chain = preprocess_task(message)
         if not current_chain:
             return
-        send_task(message, current_chain.task)
+        send_task(message.chat.id, current_chain.task)
 
     def preprocess_task(message: Message):
         member = get_member(message.from_user.id)
