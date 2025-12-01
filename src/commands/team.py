@@ -230,7 +230,7 @@ def register_team_setting_commands(bot: TeleBot):
         chat_id = call.message.chat.id
         print('cancel delete team')
         bot.delete_message(chat_id,  call.message.message_id)
-        bot.send_message(chat_id, CommonMessages.CANCEL_ACTION,)
+        bot.send_message(chat_id, CommonMessages.CANCEL_ACTION)
 
     
         

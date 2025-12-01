@@ -47,7 +47,7 @@ def get_admin(session: Session, user_id: int) -> Optional[Admin]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
-
+# Добавление команды в бд
 @connection
 def add_team(session: Session, team: Team) -> Optional[Team]:
     try:
@@ -57,7 +57,6 @@ def add_team(session: Session, team: Team) -> Optional[Team]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
         session.rollback()
-
 
 @connection
 def update_team(
@@ -77,7 +76,6 @@ def update_team(
         print(f'Error {e}')
         session.rollback()
 
-
 # Удаление команды из бд
 @connection
 def delete_team(session: Session, team_id: int):
@@ -92,6 +90,17 @@ def delete_team(session: Session, team_id: int):
         session.rollback()
         return False
 
+# Сброс участников
+@connection
+def delete_team_members(session: Session, team_id: int):
+    try:
+        member = session.query(TeamMember).filter_by(team_id=team_id).delete()
+        session.commit()
+        return True
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
+        session.rollback()
+        return False
 
 # Метод меняющий любой атрибут команды
 @connection
@@ -114,6 +123,7 @@ def edit_task(session: Session, task_id: int, field: str, value):
     except SQLAlchemyError as e:
         print(f'Error: {e}')
 
+# Удаление задания
 @connection
 def delete_task(session: Session, task_id: int):
     try:
@@ -126,6 +136,7 @@ def delete_task(session: Session, task_id: int):
         session.rollback()
         return False
 
+# Поиск команды по её id
 @connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
     try:
@@ -133,7 +144,7 @@ def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
-
+# Поиск команды по её названию
 @connection
 def get_team_by_name(session: Session, team_name: str) -> Optional[Team]:
     try:
@@ -149,7 +160,7 @@ def get_team_by_leader(session: Session, leader_id: int) -> Optional[Team]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
-
+# Поиск команды по её кодовому слову
 @connection
 def get_team_by_code(session: Session, code_word: str) -> Optional[Team]:
     try:
