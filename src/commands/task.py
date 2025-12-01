@@ -143,7 +143,7 @@ def register_task_setting_commands(bot: TeleBot):
         bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
 
 
-    #Удалление задания
+    #Удаление задания
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.DELETE_TASK)
     def start_delete_task(message: Message):
         if not check_admin(bot, message):

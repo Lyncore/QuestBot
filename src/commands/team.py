@@ -167,7 +167,7 @@ def register_team_setting_commands(bot: TeleBot):
         bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
 
 
-    #Удалление команды
+    #Удаление команды
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.DELETE_TEAM)
     def start_delete_team(message: Message):
         if not check_admin(bot, message):
