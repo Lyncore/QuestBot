@@ -53,14 +53,17 @@ def start_message(message):
     is_admin = check_admin(bot, message, silent=True)
 
     def preprocess_task(message: Message, team: Team):
-
+        print('preprocess task')
         current_chain = get_current_chain(team.id, team.current_chain_order)
         if current_chain:
             if team.current_chain_order == 0:
                 task_assist_message = QuestMessages.FIRST_TASK_MESSAGE
+                bot.send_message(message.chat.id, task_assist_message)
+                return current_chain
             else:
                 task_assist_message = QuestMessages.CURRENT_TASK_MESSAGE
                 bot.send_message(message.chat.id, task_assist_message)
+                return current_chain
         else:
             print('current chain is false')
             bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS)
