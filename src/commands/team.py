@@ -1,5 +1,4 @@
 from os import getenv
-from dotenv import load_dotenv
 from collections import defaultdict
 import secrets
 import string
@@ -16,7 +15,6 @@ from msg_locale import TeamMessages, CommonMessages, ButtonMessages, EditTeamBut
 
 
 
-load_dotenv()
 
 
 bot_username = getenv('BOT_USERNAME')
