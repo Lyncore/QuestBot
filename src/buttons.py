@@ -25,6 +25,12 @@ def render_main_menu(is_admin: bool = False):
             ButtonMessages.RESET_TASK,
             row_width=1
         )
+        markup.add(
+            ButtonMessages.JOIN_TEAM,
+            ButtonMessages.CURRENT_TASK,
+            ButtonMessages.NEXT_TASK,
+            ButtonMessages.HELP
+        )
     else:
         markup.add(
             ButtonMessages.JOIN_TEAM,

@@ -64,7 +64,7 @@ def register_quest_commands(bot: TeleBot):
             description=task.description
         ))
         if task.photo:
-            bot.send_photo(chat_id, task.photo, caption=task.description)
+            bot.send_photo(chat_id, task.photo)
         if task.animation:
             bot.send_animation(chat_id, task.animation)
         if task.sticker:

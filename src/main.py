@@ -53,12 +53,11 @@ def start_message(message):
     is_admin = check_admin(bot, message, silent=True)
 
     def preprocess_task(message: Message, team: Team):
-        print('preprocess task')
+
         current_chain = get_current_chain(team.id, team.current_chain_order)
         if current_chain:
             if team.current_chain_order == 0:
                 task_assist_message = QuestMessages.FIRST_TASK_MESSAGE
-                bot.send_message(message.chat.id, task_assist_message)
                 return current_chain
             else:
                 task_assist_message = QuestMessages.CURRENT_TASK_MESSAGE
@@ -75,7 +74,7 @@ def start_message(message):
             description=task.description
         ))
         if task.photo:
-            bot.send_photo(chat_id, task.photo, caption=task.description)
+            bot.send_photo(chat_id, task.photo)
         if task.animation:
             bot.send_animation(chat_id, task.animation)
         if task.sticker:
@@ -86,14 +85,14 @@ def start_message(message):
             ))
 
     if invite_token:
-
+        print('invite_token')
         member = get_member(user_id)
         if member:
             team = get_team_by_id(member.team_id)
             bot.send_message(
                 chat_id,
                 QuestMessages.ALREADY_IN_TEAM.format(
-                    team_name=team.team_name                    ),
+                    team_name=team.team_name),
                     reply_markup=render_main_menu(is_admin)
                 ) 
         else:
@@ -109,6 +108,7 @@ def start_message(message):
 
             current_chain = preprocess_task(message, team)
             if not current_chain:
+                print('not current chain')
                 return
             send_task(chat_id, current_chain.task)
 
