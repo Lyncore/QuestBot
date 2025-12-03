@@ -1,13 +1,22 @@
+from collections import defaultdict
 from telebot import TeleBot
 from telebot import TeleBot
 from telebot.types import Message
+from telebot.states import StatesGroup, State
+from telebot.states.sync import StateContext
 
 from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team
 from database.models import Team, Task
 from msg_locale import QuestMessages, ButtonMessages
+from buttons import render_cancel_button
 
+
+
+class TaskCodeState(State):
+    waiting_for_task_code = State()
 
 def register_quest_commands(bot: TeleBot):
+    temp_data = defaultdict(dict)
     # Присоединение к команде
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
     def join_team(message: Message):
@@ -87,11 +96,14 @@ def register_quest_commands(bot: TeleBot):
 
     # Обработка перехода к следующему заданию
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.NEXT_TASK)
-    def next_task(message: Message):
+    def next_task(message: Message, state: StateContext):
+        chat_id = message.chat.id
         member = get_member(message.from_user.id)
         if not member:
             bot.reply_to(message, QuestMessages.NOT_IN_TEAM)
             return
+        
+        
         team = get_team_by_id(member.team_id)
 
         current_chain = get_current_chain(team.id, team.current_chain_order)
@@ -99,14 +111,25 @@ def register_quest_commands(bot: TeleBot):
             print('not_current_chain')
             bot.reply_to(message, QuestMessages.NO_ACTIVE_TASKS)
             return
+        
+        temp_data[chat_id]["team"] = team
+        temp_data[chat_id]["current_chain"] = current_chain
+        state.set(TaskCodeState.waiting_for_task_code)
+        bot.reply_to(message, QuestMessages.ENTER_TASK_CODE, reply_markup=render_cancel_button())
 
-        msg = bot.reply_to(message, QuestMessages.ENTER_TASK_CODE)
-        bot.register_next_step_handler(msg, check_task_code, team, current_chain.task)
+    @bot.message_handler(state=TaskCodeState.waiting_for_task_code)
+    def process_next_task(message: Message, state: StateContext, team: Team, current_chain: Task):
+        chat_id = message.chat.id
+        msg = message.text
+        
+        state.add_data(msg)
+        check_task_code(message, temp_data[chat_id]["team"], temp_data[chat_id]["current_chain"].task)
+        state.delete()
 
     def check_task_code(message: Message, team: Team, current_team_task: Task):
         if current_team_task.code_word.lower() not in message.text.lower():
             bot.reply_to(message, QuestMessages.WRONG_TASK_CODE)
-            return
+            return False
 
         who_solved = message.from_user.id
         next_order = team.current_chain_order + 1
