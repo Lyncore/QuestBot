@@ -140,7 +140,8 @@ def delete_task(session: Session, task_id: int):
 @connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
     try:
-        return session.query(Team).options(joinedload(Team.chains)).get(team_id)
+        team = session.query(Team).options(joinedload(Team.chains)).get(team_id)
+        return team
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
@@ -148,7 +149,8 @@ def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
 @connection
 def get_team_by_name(session: Session, team_name: str) -> Optional[Team]:
     try:
-        return session.query(Team).filter_by(team_name=team_name).first()
+        team = session.query(Team).filter_by(team_name=team_name).first()
+        return team
     except SQLAlchemyError as e:
         print(f'Error {e}')
 

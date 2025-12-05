@@ -6,7 +6,7 @@ from database.models import Task, Team
 from msg_locale import CommonMessages, ButtonMessages, EditTeamButtonMessages, EditTaskButtonMessages
 
 
-def render_main_menu(is_admin: bool = False):
+def render_main_menu(is_admin: bool = False, is_in_team: bool = False):
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     if is_admin:
         markup.add(
@@ -32,8 +32,12 @@ def render_main_menu(is_admin: bool = False):
             ButtonMessages.HELP
         )
     else:
+        if not is_in_team:
+            markup.add(
+                ButtonMessages.JOIN_TEAM
+            )
+            
         markup.add(
-            ButtonMessages.JOIN_TEAM,
             ButtonMessages.CURRENT_TASK,
             ButtonMessages.NEXT_TASK,
             ButtonMessages.HELP

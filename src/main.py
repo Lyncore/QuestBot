@@ -93,7 +93,7 @@ def start_message(message):
                 chat_id,
                 QuestMessages.ALREADY_IN_TEAM.format(
                     team_name=team.team_name),
-                    reply_markup=render_main_menu(is_admin)
+                    reply_markup=render_main_menu(is_admin, is_in_team=True)
                 ) 
         else:
             team = join_team_via_invite_token(invite_token, user_id)
@@ -103,7 +103,7 @@ def start_message(message):
                 QuestMessages.JOINED_TO_TEAM.format(
                     team_name=team.team_name
                 ),
-                reply_markup=render_main_menu(is_admin)
+                reply_markup=render_main_menu(is_admin, is_in_team=True)
             )
 
             current_chain = preprocess_task(message, team)
@@ -126,7 +126,7 @@ def handle_cancel_commands(message: Message, state: StateContext):
     bot.send_message(
         message.chat.id,
         CommonMessages.CANCEL_ACTION,
-        reply_markup=render_main_menu(check_admin(bot, message, silent=True)))
+        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=True))
 
 
 @bot.message_handler(func=lambda m: m.text == ButtonMessages.HELP)
@@ -154,7 +154,7 @@ def echo_all(message):
     bot.reply_to( 
         message,
         CommonMessages.COMMON_MESSAGE,
-        reply_markup=render_main_menu(check_admin(bot, message, silent=True))
+        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=True)
     )
 
 
