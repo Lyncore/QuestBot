@@ -64,7 +64,7 @@ def register_quest_commands(bot: TeleBot):
             bot.send_message(message.chat.id, task_assist_message)
         else:
             print('current chain is false')
-            bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS)
+            bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS, reply_markup=render_main_menu(is_in_team=True))
         return current_chain
         
     # Отправка задания пользователю
