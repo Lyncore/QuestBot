@@ -16,40 +16,67 @@ from checks import check_admin
 class TaskCodeState(StatesGroup):
     waiting_for_task_code = State()
 
+class TeamCodeState(StatesGroup):
+    waiting_for_team_code = State()
+
 def register_quest_commands(bot: TeleBot):
     temp_data = defaultdict(dict)
     # Присоединение к команде
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
-    def join_team(message: Message):
+    def join_team(message: Message, state = StateContext):
+        chat_id = message.chat.id
+
+
         member = get_member(message.from_user.id)
-        
         if member:
             team = get_team_by_id(team_id=member.team_id)
-            bot.reply_to(message, QuestMessages.ALREADY_IN_TEAM.format(
-                team_name=team.team_name
-            ))
+            bot.reply_to(
+                message, 
+                QuestMessages.ALREADY_IN_TEAM.format(
+                    team_name=team.team_name
+                ),
+                reply_markup = render_main_menu(
+                    is_admin=check_admin(bot, message, silent=True),
+                    is_in_team=True
+                )
+            )
             return
+        
 
-        msg = bot.reply_to(message, QuestMessages.ENTER_CODE_WORD)
-        bot.register_next_step_handler(msg, process_team_join)
+        state.set(TeamCodeState.waiting_for_team_code)
+        bot.reply_to(message, QuestMessages.ENTER_CODE_WORD, reply_markup = render_cancel_button())
 
-
-    def process_team_join(message: Message):
+    @bot.message_handler(state=TeamCodeState.waiting_for_team_code)
+    def process_team_join(message: Message, state: StateContext):
         code_word = message.text
         team = get_team_by_code(code_word)
         if not team:
-            bot.reply_to(message, QuestMessages.TEAM_NOT_FOUND)
-            return
+            bot.reply_to(
+                message, 
+                QuestMessages.TEAM_NOT_FOUND, 
+                reply_markup = render_main_menu(
+                    is_admin=check_admin(bot, message, silent=True),
+                    is_in_team=True
+                )
+            )
 
         else:
             join_team_via_code(code_word, user_id=message.from_user.id)
-            bot.reply_to(message, team.welcome_message, reply_markup =render_main_menu(is_in_team=True))
+            bot.reply_to(
+                message, team.welcome_message, 
+                reply_markup = render_main_menu(
+                    is_admin=check_admin(bot, message, silent=True),
+                    is_in_team=True
+                )
+            )
+            state.delete()
 
-        # Отправка первого задания
-        current_chain = preprocess_task(message)
-        if not current_chain:
-            return
-        send_task(message.chat.id, current_chain.task)
+
+            # Отправка первого задания
+            current_chain = preprocess_task(message)
+            if not current_chain:
+                return
+            send_task(message.chat.id, current_chain.task)
 
     def preprocess_task(message: Message):
         member = get_member(message.from_user.id)
@@ -64,9 +91,9 @@ def register_quest_commands(bot: TeleBot):
             bot.send_message(message.chat.id, task_assist_message)
         else:
             print('current chain is false')
-            bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS, reply_markup=render_main_menu(is_in_team=True))
+            bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS, reply_markup = render_main_menu(check_admin(bot, message, silent=True), is_in_team=True))
         return current_chain
-        
+    
     # Отправка задания пользователю
     def send_task(chat_id: int, task: Task):
         bot.send_message(chat_id, QuestMessages.TASK_TEMPLATE.format(
@@ -88,7 +115,7 @@ def register_quest_commands(bot: TeleBot):
     def get_task(message: Message):
         member = get_member(message.from_user.id)
         if not member:
-            bot.reply_to(message, QuestMessages.NOT_IN_TEAM)
+            bot.reply_to(message, QuestMessages.NOT_IN_TEAM, reply_markup = render_main_menu(check_admin(bot, message, silent=True)))
             return
         current_chain = preprocess_task(message)
         if not current_chain:
@@ -114,7 +141,7 @@ def register_quest_commands(bot: TeleBot):
 
         if not current_chain:
             print('not_current_chain')
-            bot.reply_to(message, QuestMessages.NO_ACTIVE_TASKS)
+            bot.reply_to(message, QuestMessages.NO_ACTIVE_TASKS, )
             return
         
         state.set(TaskCodeState.waiting_for_task_code)
@@ -133,9 +160,7 @@ def register_quest_commands(bot: TeleBot):
     # Обработка ввода кодового слова
     @bot.message_handler(state=TaskCodeState.waiting_for_task_code)
     def process_next_task(message: Message, state: StateContext):
-        user_id = message.from_user.id
         chat_id = message.chat.id
-        msg_text = message.text
         
         team_id = temp_data[chat_id].get("team_id")
         chain_order = temp_data[chat_id].get("chain_order")
@@ -150,12 +175,14 @@ def register_quest_commands(bot: TeleBot):
             return
         
         ok = check_task_code(message, team, current_chain.task)
+        
 
         if not ok:
             return
         
         temp_data.pop(chat_id, None)
         state.delete()
+        
 
     def check_task_code(message: Message, team: Team, current_team_task: Task):
         if current_team_task.code_word.lower() not in message.text.lower():
@@ -181,7 +208,7 @@ def register_quest_commands(bot: TeleBot):
                     )
                 except Exception as e:
                     print(f"Не удалось отправить финальное сообщение пользователю {user_id}: {e}")    
-            return
+            return True
             
         task = next_chain.task
         bot.reply_to(
@@ -198,16 +225,4 @@ def register_quest_commands(bot: TeleBot):
                     send_task(user_id, task)
             except Exception as e:
                 print(f"Не удалось отправить задание пользователю {user_id}: {e}")
-
-    @bot.message_handler(func=lambda m: m.text == CommonMessages.CANCEL, state=TaskCodeState.waiting_for_task_code)
-    def cancel_next_task(message: Message, state: StateContext):
-        chat_id = message.chat.id
-        
-        temp_data.pop(chat_id, None)
-        state.delete()
-        bot.send_message(
-            CommonMessages.CANCEL, 
-            reply_markup=render_main_menu(
-                is_admin=check_admin(bot, message, silent=True),
-                is_in_team=True)
-        )
+        return True

@@ -112,21 +112,32 @@ def start_message(message):
                 return
             send_task(chat_id, current_chain.task)
 
-    else:   
+    else:
+        member = get_member(user_id)
+        if member:
+            is_in_team = True
+        else:
+            is_in_team = False
         bot.send_message(
             message.chat.id,
             CommonMessages.WELCOME_MESSAGE, 
-            reply_markup=render_main_menu(is_admin)
+            reply_markup=render_main_menu(is_admin, is_in_team)
         )
 
 
 @bot.message_handler(state="*", func=lambda m: m.text == CommonMessages.CANCEL)
 def handle_cancel_commands(message: Message, state: StateContext):
     state.delete()
+    user_id = message.from_user.id
+    member = get_member(user_id)
+    if member:
+        is_in_team = True
+    else:
+        is_in_team = False
     bot.send_message(
         message.chat.id,
         CommonMessages.CANCEL_ACTION,
-        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=True))
+        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=is_in_team))
 
 
 @bot.message_handler(func=lambda m: m.text == ButtonMessages.HELP)
