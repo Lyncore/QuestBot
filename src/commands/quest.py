@@ -7,7 +7,7 @@ from telebot.states.sync import StateContext
 
 from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team
 from database.models import Team, Task
-from msg_locale import QuestMessages, ButtonMessages
+from msg_locale import QuestMessages, ButtonMessages, CommonMessages
 from buttons import render_cancel_button, render_main_menu
 from checks import check_admin
 
@@ -198,3 +198,16 @@ def register_quest_commands(bot: TeleBot):
                     send_task(user_id, task)
             except Exception as e:
                 print(f"Не удалось отправить задание пользователю {user_id}: {e}")
+
+    @bot.message_handler(func=lambda m: m.text == CommonMessages.CANCEL, state=TaskCodeState.waiting_for_task_code)
+    def cancel_next_task(message: Message, state: StateContext):
+        chat_id = message.chat.id
+        
+        temp_data.pop(chat_id, None)
+        state.delete()
+        bot.send_message(
+            CommonMessages.CANCEL, 
+            reply_markup=render_main_menu(
+                is_admin=check_admin(bot, message, silent=True),
+                is_in_team=True)
+        )
