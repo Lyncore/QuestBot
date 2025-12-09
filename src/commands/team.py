@@ -1,5 +1,4 @@
 from os import getenv
-from dotenv import load_dotenv
 from collections import defaultdict
 import secrets
 import string
@@ -8,15 +7,14 @@ from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
 from telebot.types import Message, CallbackQuery
 
-from buttons import render_team_buttons, render_cancel_button, render_main_menu, render_team_edit_buttons
+from buttons import render_team_buttons, render_cancel_button, render_main_menu, render_team_edit_buttons, render_yes_no_buttons
 from checks import check_admin
-from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name, edit_team, get_all_teams
+from database.dao import add_team, get_teams, update_team, get_team_by_id, get_team_by_name, edit_team, get_all_teams, delete_team
 from database.models import Team
 from msg_locale import TeamMessages, CommonMessages, ButtonMessages, EditTeamButtonMessages
 
 
 
-load_dotenv()
 
 
 bot_username = getenv('BOT_USERNAME')
@@ -167,6 +165,74 @@ def register_team_setting_commands(bot: TeleBot):
         bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
 
 
+    #Удаление команды
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.DELETE_TEAM)
+    def start_delete_team(message: Message):
+        if not check_admin(bot, message):
+            return
+        
+        teams = get_teams()
+        if len(teams) == 0:
+            bot.reply_to(message, TeamMessages.NO_TEAMS)
+
+        else:
+            msg = TeamMessages.LIST_TEAMS_HEADER
+
+            markup = render_team_buttons(teams, 'delete_team_list', 'cancel_list_team_delete')
+            bot.reply_to(message, msg, reply_markup = markup)
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("delete_team_list_"))
+    def process_team_delete_list(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        team_id = int(call.data.split('_')[-1])
+
+        team = get_team_by_id(team_id)
+
+        if not team:
+            bot.send_message(TeamMessages.TEAM_NOT_FOUND)
+            return
+        
+        bot.delete_message(chat_id, call.message.message_id)
+        bot.send_message(
+            chat_id=chat_id,
+            text=TeamMessages.TEAM_DELETE_YES_NO.format(team_name=team.team_name),
+            reply_markup=render_yes_no_buttons(
+                callback_yes="delete_team",
+                callback_no="cancel_delete_team",
+                team_id = team_id
+            )
+        )
+
+    @bot.callback_query_handler(func=lambda call:call.data.startswith("delete_team_"))
+    def delete_team_finally(call: CallbackQuery):
+        print('delete finally')
+        chat_id = call.message.chat.id
+        team_id = int(call.data.split('_')[-1])
+        if delete_team(team_id):
+            bot.delete_message(chat_id, call.message.message_id)
+            bot.send_message(
+                chat_id=chat_id,
+                text=TeamMessages.TEAM_DELETED
+            )
+        else:
+            bot.delete_message(chat_id, call.message.message_id)
+            bot.send_message(
+                chat_id=chat_id,
+                text=CommonMessages.ERROR_TEMPLATE.format(
+                    error = ' '
+                )
+            )
+        
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("cancel_delete_team"))
+    def cancel_delete_team(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        print('cancel delete team')
+        bot.delete_message(chat_id,  call.message.message_id)
+        bot.send_message(chat_id, CommonMessages.CANCEL_ACTION)
+
+    
+        
+
 # --------- Редактирование команды ---------
 def register_team_edit_commands(bot: TeleBot):
     temp_data = defaultdict(dict)
@@ -247,10 +313,21 @@ def register_team_edit_commands(bot: TeleBot):
             state.delete()
             return
         
+        new_team_name = message.text
+        
+        team = get_team_by_name(message.text)
+        if team:
+            if team.id == team_id:
+                bot.reply_to(message, TeamMessages.TEAM_NAME_SAME, reply_markup=render_cancel_button())
+                return
+            else:
+                bot.reply_to(message, TeamMessages.TEAM_NAME_EXISTS, reply_markup=render_cancel_button())
+                return
+        
         if message.content_type == 'text':
 
             # Обновление поле в базе данных
-            edit_team(team_id, "team_name", message.text)
+            edit_team(team_id, "team_name", new_team_name)
 
             bot.send_message(
                 chat_id, 

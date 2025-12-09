@@ -11,3 +11,4 @@ services:
       DATABASE_URL: mysql+pymysql://root:root@host.docker.internal/proforient #${DATABASE_URL}
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
       OTP_SECRET: ${OTP_SECRET}
+      BOT_USERNAME: ${BOT_USERNAME}
