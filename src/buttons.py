@@ -6,7 +6,7 @@ from database.models import Task, Team
 from msg_locale import CommonMessages, ButtonMessages, EditTeamButtonMessages, EditTaskButtonMessages
 
 
-def render_main_menu(is_admin: bool = False):
+def render_main_menu(is_admin: bool = False, is_in_team: bool = False):
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     if is_admin:
         markup.add(
@@ -16,17 +16,28 @@ def render_main_menu(is_admin: bool = False):
             ButtonMessages.EDIT_TASK,
             ButtonMessages.LIST_TEAM,
             ButtonMessages.LIST_TASK,
-
+            ButtonMessages.DELETE_TEAM,
+            ButtonMessages.DELETE_TASK
         )
         markup.add(
             ButtonMessages.ASSIGN_TASK,
-            ButtonMessages.RESET_LEADER,
+            ButtonMessages.RESET_TEAM_MEMBERS,
             ButtonMessages.RESET_TASK,
             row_width=1
         )
-    else:
         markup.add(
             ButtonMessages.JOIN_TEAM,
+            ButtonMessages.CURRENT_TASK,
+            ButtonMessages.NEXT_TASK,
+            ButtonMessages.HELP
+        )
+    else:
+        if not is_in_team:
+            markup.add(
+                ButtonMessages.JOIN_TEAM
+            )
+            
+        markup.add(
             ButtonMessages.CURRENT_TASK,
             ButtonMessages.NEXT_TASK,
             ButtonMessages.HELP
@@ -143,5 +154,24 @@ def render_task_assign_buttons(
     markup.row(
         InlineKeyboardButton(CommonMessages.SELECT_FINISH, callback_data=callback_finish),
         InlineKeyboardButton(CommonMessages.CANCEL, callback_data=callback_cancel)
+    )
+    return markup
+
+def render_yes_no_buttons(
+        callback_yes: str,
+        callback_no: str,
+        team_id: int = None,
+        task_id: int = None
+):
+    markup = InlineKeyboardMarkup()
+
+    if team_id:
+        yes_data = f'{callback_yes}_{team_id}'
+    elif task_id:
+        yes_data = f'{callback_yes}_{task_id}'
+        
+    markup.row(
+        InlineKeyboardButton(CommonMessages.YES2, callback_data=yes_data),
+        InlineKeyboardButton(CommonMessages.NO, callback_data=callback_no)
     )
     return markup

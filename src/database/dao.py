@@ -47,7 +47,7 @@ def get_admin(session: Session, user_id: int) -> Optional[Admin]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
-
+# Добавление команды в бд
 @connection
 def add_team(session: Session, team: Team) -> Optional[Team]:
     try:
@@ -57,7 +57,6 @@ def add_team(session: Session, team: Team) -> Optional[Team]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
         session.rollback()
-
 
 @connection
 def update_team(
@@ -76,6 +75,32 @@ def update_team(
     except SQLAlchemyError as e:
         print(f'Error {e}')
         session.rollback()
+
+# Удаление команды из бд
+@connection
+def delete_team(session: Session, team_id: int):
+    try:
+        member = session.query(TeamMember).filter_by(team_id=team_id).delete()
+        chains = session.query(Chain).filter_by(team_id=team_id).delete()
+        team = session.query(Team).filter_by(id=team_id).delete()
+        session.commit()
+        return True
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+        session.rollback()
+        return False
+
+# Сброс участников
+@connection
+def delete_team_members(session: Session, team_id: int):
+    try:
+        member = session.query(TeamMember).filter_by(team_id=team_id).delete()
+        session.commit()
+        return True
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
+        session.rollback()
+        return False
 
 # Метод меняющий любой атрибут команды
 @connection
@@ -98,18 +123,34 @@ def edit_task(session: Session, task_id: int, field: str, value):
     except SQLAlchemyError as e:
         print(f'Error: {e}')
 
+# Удаление задания
+@connection
+def delete_task(session: Session, task_id: int):
+    try:
+        chains = session.query(Chain).filter_by(task_id=task_id).delete()
+        task = session.query(Task).filter_by(id=task_id).delete()
+        session.commit()
+        return True
+    except SQLAlchemyError as e:
+        print(f'Error: {e}')
+        session.rollback()
+        return False
+
+# Поиск команды по её id
 @connection
 def get_team_by_id(session: Session, team_id: int) -> Optional[Team]:
     try:
-        return session.query(Team).options(joinedload(Team.chains)).get(team_id)
+        team = session.query(Team).options(joinedload(Team.chains)).get(team_id)
+        return team
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
-
+# Поиск команды по её названию
 @connection
 def get_team_by_name(session: Session, team_name: str) -> Optional[Team]:
     try:
-        return session.query(Team).filter_by(team_name=team_name).first()
+        team = session.query(Team).filter_by(team_name=team_name).first()
+        return team
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
@@ -121,7 +162,7 @@ def get_team_by_leader(session: Session, leader_id: int) -> Optional[Team]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
-
+# Поиск команды по её кодовому слову
 @connection
 def get_team_by_code(session: Session, code_word: str) -> Optional[Team]:
     try:
@@ -134,12 +175,11 @@ def get_team_by_code(session: Session, code_word: str) -> Optional[Team]:
 def join_team_via_invite_token(session: Session, invite_token: str, user_id: int):
     try:
         team = session.query(Team).filter_by(invite_token=invite_token).first()
-        team_name = team.team_name
 
         member = TeamMember(team_id=team.id, user_id=user_id)
         session.add(member)
         session.commit()
-        return team_name
+        return team
             
     except SQLAlchemyError as e:
         print(F'Error {e}')
@@ -155,22 +195,25 @@ def get_user_ids_by_team(session: Session, team_id: int) -> List[int]:
 def join_team_via_code(session: Session, code_word: str, user_id: int):
     try:
         team = session.query(Team).filter_by(code_word=code_word).first()
-        team_name = team.team_name
 
         member = TeamMember(team_id=team.id, user_id=user_id)
         session.add(member)
         session.commit()
-        return team_name
+        return team
             
     except SQLAlchemyError as e:
         print(F'Error {e}')
+
+# Присоединение к команде
 @connection
 def get_member(session: Session, user_id: int):
     try:
-        return session.query(TeamMember).filter_by(user_id=user_id).first()
+        member = session.query(TeamMember).filter_by(user_id=user_id).first()
+        return member
     except SQLAlchemyError as e:
         print(f'Error {e}')
         return None
+    
 @connection
 def get_teams(session: Session, leader_only: bool = False, started_only: bool = False) -> List[Type[Team]]:
     try:

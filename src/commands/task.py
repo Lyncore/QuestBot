@@ -4,9 +4,9 @@ from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
 from telebot.types import Message, CallbackQuery, InputMedia, InputMediaAnimation, InputMediaPhoto
 
-from buttons import render_cancel_button, render_main_menu, render_task_buttons, render_task_edit_buttons
+from buttons import render_cancel_button, render_main_menu, render_task_buttons, render_task_edit_buttons, render_yes_no_buttons
 from checks import check_admin
-from database.dao import add_task, edit_task, get_tasks, get_task_by_id
+from database.dao import add_task, edit_task, get_tasks, get_task_by_id, delete_task
 from database.models import Task
 from msg_locale import TaskMessages, CommonMessages, ButtonMessages, QuestMessages, EditTaskButtonMessages
 
@@ -141,6 +141,74 @@ def register_task_setting_commands(bot: TeleBot):
         message_id = call.message.message_id
 
         bot.edit_message_text(CommonMessages.CANCEL_ACTION, chat_id, message_id)
+
+
+    #Удаление задания
+    @bot.message_handler(func=lambda m: m.text == ButtonMessages.DELETE_TASK)
+    def start_delete_task(message: Message):
+        if not check_admin(bot, message):
+            return
+        
+        tasks = get_tasks()
+        if len(tasks) == 0:
+            bot.reply_to(message, TaskMessages.NO_TASKS)
+
+        else:
+            
+            msg = TaskMessages.LIST_TASKS_HEADER
+
+            markup = render_task_buttons(tasks, 'delete_tasks_list', 'cancel_delete_tasks_list')
+            bot.reply_to(message, msg, reply_markup = markup)
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("delete_tasks_list_"))
+    def process_delete_task_list(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        task_id = int(call.data.split('_')[-1])
+
+        task = get_task_by_id(task_id)
+
+        if not task:
+            bot.send_message(TaskMessages.TASK_NOT_FOUND)
+            return
+        
+        bot.delete_message(chat_id, call.message.message_id)
+        bot.send_message(
+            chat_id=chat_id,
+            text=TaskMessages.TASK_DELETE_YES_NO.format(task_name=task.task_name),
+            reply_markup=render_yes_no_buttons(
+                callback_yes="delete_task",
+                callback_no="cancel_delete_task",
+                task_id=task_id
+            )
+        )
+
+    @bot.callback_query_handler(func=lambda call:call.data.startswith("delete_task"))
+    def delete_task_finally(call: CallbackQuery):
+        print('delete finally')
+        chat_id = call.message.chat.id
+        task_id = int(call.data.split('_')[-1])
+        if delete_task(task_id):
+            bot.delete_message(chat_id, call.message.message_id)
+            bot.send_message(
+                chat_id=chat_id,
+                text=TaskMessages.TASK_DELETED
+            )
+        else:
+            bot.delete_message(chat_id, call.message.message_id)
+            bot.send_message(
+                chat_id=chat_id,
+                text=CommonMessages.ERROR_TEMPLATE.format(
+                    error = ' '
+                )
+            )
+        
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("cancel_delete_task"))
+    def cancel_delete_task(call: CallbackQuery):
+        chat_id = call.message.chat.id
+        print('cancel delete task')
+        bot.delete_message(chat_id,  call.message.message_id)
+        bot.send_message(chat_id, CommonMessages.CANCEL_ACTION,)
+
 
 # --------- Редактирование задачи ---------
 def register_task_edit_commands(bot: TeleBot):
