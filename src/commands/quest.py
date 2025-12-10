@@ -10,7 +10,7 @@ from telebot.states.sync import StateContext
 
 load_dotenv()
 
-from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team, join_team_via_invite_token
+from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team, join_team_via_invite_token, get_team_by_invite_token
 from database.models import Team, Task
 
 from msg_locale import QuestMessages, ButtonMessages, CommonMessages
@@ -55,7 +55,7 @@ def register_quest_commands(bot: TeleBot):
             if is_valid_invite_token(candidate):
                 return candidate
 
-        #?start=
+        # ?start=
         if "?start=" in stripped:
             print(f'?start')
            
@@ -74,13 +74,11 @@ def register_quest_commands(bot: TeleBot):
                 print(f'clean token: {clean_token}')
                 return clean_token
 
-        return None
+        return False
     
     # Присоединение к команде
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
     def join_team(message: Message, state = StateContext):
-        chat_id = message.chat.id
-
 
         member = get_member(message.from_user.id)
         if member:
@@ -103,7 +101,7 @@ def register_quest_commands(bot: TeleBot):
 
     @bot.message_handler(state=TeamCodeState.waiting_for_team_code)
     def process_team_join(message: Message, state: StateContext):
-        print('Full join team text: ', message.text)
+        print('Full join team text:', message.text)
         user_id = message.from_user.id
         chat_id = message.chat.id
         text = message.text
@@ -115,9 +113,14 @@ def register_quest_commands(bot: TeleBot):
         print(f'Invite token join team: {invite_token}')
 
         if invite_token:
-            team = join_team_via_invite_token(invite_token, user_id)
+            print(f'invite_token: {invite_token}')
+            team = get_team_by_invite_token(invite_token)
             
-            if team: 
+            if team:
+                join = join_team_via_invite_token(invite_token, user_id)
+                if not join:
+                    bot.reply_to(message, QuestMessages.TEAM_NOT_FOUND)
+
                 bot.send_message(
                     chat_id,
                     QuestMessages.JOINED_TO_TEAM.format(
@@ -133,10 +136,12 @@ def register_quest_commands(bot: TeleBot):
                 if not current_chain:
                     return
                 send_task(message.chat.id, current_chain.task)
+                
                 return
             else:
                 bot.reply_to(message, QuestMessages.TEAM_NOT_FOUND)
-                return
+                print('invite token team not found')
+                
             
 
         code_word = text.strip()
@@ -145,29 +150,28 @@ def register_quest_commands(bot: TeleBot):
             bot.reply_to(
                 message, 
                 QuestMessages.TEAM_NOT_FOUND, 
-                reply_markup = render_main_menu(
-                    is_admin=check_admin(bot, message, silent=True),
-                    is_in_team=True
-                )
+                reply_markup = render_cancel_button()
             )
 
-        else:
-            join_team_via_code(code_word, user_id=message.from_user.id)
-            bot.reply_to(
-                message, team.welcome_message, 
-                reply_markup = render_main_menu(
-                    is_admin=check_admin(bot, message, silent=True),
-                    is_in_team=True
-                )
-            )
+        
         state.delete()
-
-
+        join_team_via_code(code_word, user_id=message.from_user.id)
+        bot.reply_to(
+            message, team.welcome_message, 
+            reply_markup = render_main_menu(
+                is_admin=check_admin(bot, message, silent=True),
+                is_in_team=True
+            )
+        )
         # Отправка первого задания
         current_chain = preprocess_task(message)
         if not current_chain:
             return
         send_task(message.chat.id, current_chain.task)
+        return
+
+
+        
 
     def preprocess_task(message: Message):
         member = get_member(message.from_user.id)

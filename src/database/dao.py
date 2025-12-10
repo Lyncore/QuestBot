@@ -170,6 +170,13 @@ def get_team_by_code(session: Session, code_word: str) -> Optional[Team]:
     except SQLAlchemyError as e:
         print(f'Error {e}')
 
+@connection
+def get_team_by_invite_token(session: Session, invite_token: bool) -> bool:
+    try:
+        return session.query(Team).filter_by(invite_token=invite_token).first
+    except SQLAlchemyError as e:
+        print(f'Error {e}')
+
 # --- Присоеднинение к команде по ссылке ---
 @connection
 def join_team_via_invite_token(session: Session, invite_token: str, user_id: int):
