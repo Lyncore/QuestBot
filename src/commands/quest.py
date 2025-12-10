@@ -1,3 +1,6 @@
+import string
+from os import getenv
+from dotenv import load_dotenv
 from collections import defaultdict
 from telebot import TeleBot
 from telebot import TeleBot
@@ -5,12 +8,20 @@ from telebot.types import Message
 from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
 
-from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team
+load_dotenv()
+
+from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team, join_team_via_invite_token
 from database.models import Team, Task
+
 from msg_locale import QuestMessages, ButtonMessages, CommonMessages
+
 from buttons import render_cancel_button, render_main_menu
+
 from checks import check_admin
 
+
+
+bot_username = getenv('BOT_USERNAME')
 
 
 class TaskCodeState(StatesGroup):
@@ -21,6 +32,50 @@ class TeamCodeState(StatesGroup):
 
 def register_quest_commands(bot: TeleBot):
     temp_data = defaultdict(dict)
+
+    # Проверяет валидный ли токен (8 латинских букв/цифр)
+    def is_valid_invite_token(s: str) -> bool:
+        return len(s) == 8 and all(c in set(string.ascii_letters+string.digits) for c in s)
+    
+
+    def extract_invite_token_from_text(text: str) -> str | None:
+        stripped = text.strip()
+        print(f'stripped: {stripped}')
+
+        # invite_token
+        if is_valid_invite_token(stripped):
+            print(f'just a token: {stripped}')
+            return stripped
+
+        # /start <invite_token>
+        if stripped.startswith("/start "):
+            print(f'/start <invite_token>: {stripped}')
+            candidate = stripped[7:].strip()  # 7 = len("/start ")
+            print(f'candidate: {candidate}')
+            if is_valid_invite_token(candidate):
+                return candidate
+
+        #?start=
+        if "?start=" in stripped:
+            print(f'?start')
+           
+            start_pos = stripped.find("?start=") + 7  
+            token_part = stripped[start_pos:]
+            print(f'token part: {token_part}')
+
+            clean_token = ""
+            for char in token_part:
+                if char in set(string.ascii_letters+string.digits):
+                    clean_token += char
+                else:
+                    break  
+
+            if is_valid_invite_token(clean_token):
+                print(f'clean token: {clean_token}')
+                return clean_token
+
+        return None
+    
     # Присоединение к команде
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
     def join_team(message: Message, state = StateContext):
@@ -48,7 +103,43 @@ def register_quest_commands(bot: TeleBot):
 
     @bot.message_handler(state=TeamCodeState.waiting_for_team_code)
     def process_team_join(message: Message, state: StateContext):
-        code_word = message.text
+        print('Full join team text: ', message.text)
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        text = message.text
+
+
+        is_admin = check_admin(bot, message, silent=True)
+
+        invite_token = extract_invite_token_from_text(text)
+        print(f'Invite token join team: {invite_token}')
+
+        if invite_token:
+            team = join_team_via_invite_token(invite_token, user_id)
+            
+            if team: 
+                bot.send_message(
+                    chat_id,
+                    QuestMessages.JOINED_TO_TEAM.format(
+                        team_name=team.team_name
+                    ),
+                    reply_markup=render_main_menu(is_admin, is_in_team=True)
+                )
+
+                state.delete()
+
+                # Отправка первого задания
+                current_chain = preprocess_task(message)
+                if not current_chain:
+                    return
+                send_task(message.chat.id, current_chain.task)
+                return
+            else:
+                bot.reply_to(message, QuestMessages.TEAM_NOT_FOUND)
+                return
+            
+
+        code_word = text.strip()
         team = get_team_by_code(code_word)
         if not team:
             bot.reply_to(
@@ -69,14 +160,14 @@ def register_quest_commands(bot: TeleBot):
                     is_in_team=True
                 )
             )
-            state.delete()
+        state.delete()
 
 
-            # Отправка первого задания
-            current_chain = preprocess_task(message)
-            if not current_chain:
-                return
-            send_task(message.chat.id, current_chain.task)
+        # Отправка первого задания
+        current_chain = preprocess_task(message)
+        if not current_chain:
+            return
+        send_task(message.chat.id, current_chain.task)
 
     def preprocess_task(message: Message):
         member = get_member(message.from_user.id)
