@@ -1,0 +1,8 @@
+---
+- name: Deploy
+  hosts: all
+  tasks:
+    - name: Docker compose pull
+      command: docker compose -f containers/questbot/docker-compose.yml pull
+    - name: Docker compose up
+      command: docker compose -f containers/questbot/docker-compose.yml up -d
