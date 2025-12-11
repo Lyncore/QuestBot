@@ -1,14 +1,16 @@
-version: '3.7'
 services:
   bot:
-    container_name: proforient_bot
-    #user: 5054:5055
+    container_name: questbot
     build:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://root:root@host.docker.internal/proforient #${DATABASE_URL}
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN}
       OTP_SECRET: ${OTP_SECRET}
       BOT_USERNAME: ${BOT_USERNAME}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}

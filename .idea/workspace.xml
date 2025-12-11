@@ -4,15 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="859359af-4aef-4e65-89ea-05b8cd866dce" name="Changes" comment="replace commands with buttond">
-      <change afterPath="$PROJECT_DIR$/src/page.py" afterDir="false" />
+    <list default="true" id="859359af-4aef-4e65-89ea-05b8cd866dce" name="Changes" comment="fix build">
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/commands/task_assign.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/task_assign.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/commands/team.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/team.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/commands/team_reset.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/commands/team_reset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/database/dao.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/database/dao.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/locale.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/locale.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/database/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/database/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/src/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,7 +40,10 @@
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/src/locale.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/sqlalchemy/engine/create.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/sqlalchemy/engine/url.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/sqlalchemy/util/deprecations.py" root0="SKIP_INSPECTION" />
+    <setting file="file://$PROJECT_DIR$/venv/lib/python3.13/site-packages/telebot/types.py" root0="SKIP_INSPECTION" />
   </component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="QODANA_PROBLEMS_VIEW_TAB" />
@@ -59,16 +60,16 @@
     <option name="showExcludedFiles" value="false" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/lyncore/ProforientBot/src/commands&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.main.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/lyncore/ProforientBot/src/commands",
+    "settings.editor.selected.configurable": "preferences.lookFeel"
   }
-}</component>
+}]]></component>
   <component name="QodanaReportsService">
     <option name="descriptions">
       <ReportDescription localRun="true" path="/private/var/folders/8h/q_c0q5rj2y1fkfhrn2lh5qfm0000gn/T/qodana_output/qodana.sarif.json" reportGuid="5e9c4a70-951c-45cd-a2e1-d98faf9a7827" reportId="ProforientBot/qodana/2025-02-11" />
@@ -116,7 +117,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-a5bc9544c897-aa17d162503b-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-243.23654.177" />
+        <option value="bundled-python-sdk-53e2683a6804-9cdd278e9d02-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-251.26094.141" />
       </set>
     </attachedChunks>
   </component>
@@ -217,8 +218,27 @@
       <option name="project" value="LOCAL" />
       <updated>1742666272926</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="replace commands with button">
+      <option name="closed" value="true" />
+      <created>1742884991580</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1742884991580</updated>
+    </task>
+    <task id="LOCAL-00013" summary="fix build">
+      <option name="closed" value="true" />
+      <created>1742885704870</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1742885704870</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="docker-compose.yml" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -242,6 +262,8 @@
     <MESSAGE value="add new phrases" />
     <MESSAGE value="ignore code word case" />
     <MESSAGE value="replace commands with buttond" />
-    <option name="LAST_COMMIT_MESSAGE" value="replace commands with buttond" />
+    <MESSAGE value="replace commands with button" />
+    <MESSAGE value="fix build" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix build" />
   </component>
 </project>

@@ -5,8 +5,16 @@ from sqlalchemy.orm import sessionmaker
 
 from .models import Base
 
-database_url = os.getenv('DATABASE_URL')
-print(database_url)
+db_host = os.getenv('DB_HOST', 'localhost')
+db_port = os.getenv('DB_PORT', '5432')
+db_user = os.getenv('DB_USER', 'questbot')
+db_password = os.getenv('DB_PASSWORD')
+db_name = os.getenv('DB_NAME', 'questbot')
+
+database_url = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+print(f"Connecting to: {database_url.replace(db_password, '*****')}")
+
 engine = create_engine(database_url)
 session = sessionmaker(bind=engine, expire_on_commit=False)
 
