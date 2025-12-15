@@ -10,7 +10,7 @@ from buttons import render_main_menu
 
 load_dotenv()
 
-from checks import check_admin
+from checks import check_admin, check_user_team
 from commands.task_assign import register_task_assign_commands
 from commands.quest import register_quest_commands
 from commands.auth import register_auth_commands, init_otp
@@ -165,7 +165,7 @@ def echo_all(message):
     bot.reply_to( 
         message,
         CommonMessages.COMMON_MESSAGE,
-        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=True)
+        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=check_user_team(bot, message))
     )
 
 

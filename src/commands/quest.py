@@ -40,28 +40,28 @@ def register_quest_commands(bot: TeleBot):
 
     def extract_invite_token_from_text(text: str) -> str | None:
         stripped = text.strip()
-        # print(f'stripped: {stripped}')
+        print(f'stripped: {stripped}')
 
         # invite_token
         if is_valid_invite_token(stripped):
-            # print(f'just a token: {stripped}')
+            print(f'just a token: {stripped}')
             return stripped
 
         # /start <invite_token>
         if stripped.startswith("/start "):
-            # print(f'/start <invite_token>: {stripped}')
+            print(f'/start <invite_token>: {stripped}')
             candidate = stripped[7:].strip()  
-            # print(f'candidate: {candidate}')
+            print(f'candidate: {candidate}')
             if is_valid_invite_token(candidate):
                 return candidate
 
         # ?start=
         if "?start=" in stripped:
-            # print(f'?start')
+            print(f'?start')
            
             start_pos = stripped.find("?start=") + 7  
             token_part = stripped[start_pos:]
-            # print(f'token part: {token_part}')
+            print(f'token part: {token_part}')
 
             clean_token = ""
             for char in token_part:
@@ -71,7 +71,7 @@ def register_quest_commands(bot: TeleBot):
                     break  
 
             if is_valid_invite_token(clean_token):
-                # print(f'clean token: {clean_token}')
+                print(f'clean token: {clean_token}')
                 return clean_token
 
         return None
@@ -101,7 +101,7 @@ def register_quest_commands(bot: TeleBot):
 
     @bot.message_handler(state=TeamCodeState.waiting_for_team_code)
     def process_team_join(message: Message, state: StateContext):
-        # print('Full join team text:', message.text)
+        print('Full join team text:', message.text)
         user_id = message.from_user.id
         chat_id = message.chat.id
         text = message.text
@@ -110,10 +110,10 @@ def register_quest_commands(bot: TeleBot):
         is_admin = check_admin(bot, message, silent=True)
 
         invite_token = extract_invite_token_from_text(text)
-        # print(f'Invite token join team: {invite_token}')
+        print(f'Invite token join team: {invite_token}')
 
         if invite_token is not None:
-            # print(f'invite_token: {invite_token}')
+            print(f'invite_token: {invite_token}')
             team = get_team_by_invite_token(invite_token)
             
             if team:
