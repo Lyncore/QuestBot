@@ -10,7 +10,7 @@ from buttons import render_main_menu
 
 load_dotenv()
 
-from checks import check_admin
+from checks import check_admin, check_user_team
 from commands.task_assign import register_task_assign_commands
 from commands.quest import register_quest_commands
 from commands.auth import register_auth_commands, init_otp
@@ -37,7 +37,7 @@ bot.set_my_commands(commands=[BotCommand(cmd, desc) for cmd, desc in CommandDesc
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    print('Full text: ', message.text)
+    #print('Full text: ', message.text)
     user_id = message.from_user.id
     chat_id = message.chat.id
     args = message.text.split()
@@ -46,11 +46,12 @@ def start_message(message):
     if len(args)>1:
         try:
             invite_token = str(args[1])
-            print(invite_token)
+            #print(invite_token)
         except: 
-            print("Invite token is none")
+            #print("Invite token is none")
             invite_token = None
     is_admin = check_admin(bot, message, silent=True)
+    is_in_team = check_user_team(bot, message)
 
     def preprocess_task(message: Message, team: Team):
 
@@ -64,7 +65,7 @@ def start_message(message):
                 bot.send_message(message.chat.id, task_assist_message)
                 return current_chain
         else:
-            print('current chain is false')
+            # print('current chain is false')
             bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS)
             return current_chain
 
@@ -85,7 +86,7 @@ def start_message(message):
             ))
 
     if invite_token:
-        print('invite_token')
+        # print('invite_token')
         member = get_member(user_id)
         if member:
             team = get_team_by_id(member.team_id)
@@ -108,16 +109,11 @@ def start_message(message):
 
             current_chain = preprocess_task(message, team)
             if not current_chain:
-                print('not current chain')
+                # print('not current chain')
                 return
             send_task(chat_id, current_chain.task)
 
     else:
-        member = get_member(user_id)
-        if member:
-            is_in_team = True
-        else:
-            is_in_team = False
         bot.send_message(
             message.chat.id,
             CommonMessages.WELCOME_MESSAGE, 
@@ -165,7 +161,7 @@ def echo_all(message):
     bot.reply_to( 
         message,
         CommonMessages.COMMON_MESSAGE,
-        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=True)
+        reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=check_user_team(bot, message))
     )
 
 

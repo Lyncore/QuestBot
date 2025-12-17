@@ -1,3 +1,6 @@
+import string
+from os import getenv
+from dotenv import load_dotenv
 from collections import defaultdict
 from telebot import TeleBot
 from telebot import TeleBot
@@ -5,12 +8,20 @@ from telebot.types import Message
 from telebot.states import StatesGroup, State
 from telebot.states.sync import StateContext
 
-from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team
+load_dotenv()
+
+from database.dao import get_member, get_team_by_code, update_team, get_current_chain, get_team_by_id, join_team_via_code, get_user_ids_by_team, join_team_via_invite_token, get_team_by_invite_token
 from database.models import Team, Task
+
 from msg_locale import QuestMessages, ButtonMessages, CommonMessages
+
 from buttons import render_cancel_button, render_main_menu
+
 from checks import check_admin
 
+
+
+bot_username = getenv('BOT_USERNAME')
 
 
 class TaskCodeState(StatesGroup):
@@ -21,11 +32,53 @@ class TeamCodeState(StatesGroup):
 
 def register_quest_commands(bot: TeleBot):
     temp_data = defaultdict(dict)
+
+    # Проверяет валидный ли токен (8 латинских букв/цифр)
+    def is_valid_invite_token(s: str) -> bool:
+        return len(s) == 8 and all(c in set(string.ascii_letters+string.digits) for c in s)
+    
+
+    def extract_invite_token_from_text(text: str) -> str | None:
+        stripped = text.strip()
+        # print(f'stripped: {stripped}')
+
+        # invite_token
+        if is_valid_invite_token(stripped):
+            # print(f'just a token: {stripped}')
+            return stripped
+
+        # /start <invite_token>
+        if stripped.startswith("/start "):
+            # print(f'/start <invite_token>: {stripped}')
+            candidate = stripped[7:].strip()  
+            # print(f'candidate: {candidate}')
+            if is_valid_invite_token(candidate):
+                return candidate
+
+        # ?start=
+        if "?start=" in stripped:
+            # print(f'?start')
+           
+            start_pos = stripped.find("?start=") + 7  
+            token_part = stripped[start_pos:]
+            # print(f'token part: {token_part}')
+
+            clean_token = ""
+            for char in token_part:
+                if char in set(string.ascii_letters+string.digits):
+                    clean_token += char
+                else:
+                    break  
+
+            if is_valid_invite_token(clean_token):
+                # print(f'clean token: {clean_token}')
+                return clean_token
+
+        return None
+    
     # Присоединение к команде
     @bot.message_handler(func=lambda m: m.text == ButtonMessages.JOIN_TEAM)
     def join_team(message: Message, state = StateContext):
-        chat_id = message.chat.id
-
 
         member = get_member(message.from_user.id)
         if member:
@@ -48,39 +101,88 @@ def register_quest_commands(bot: TeleBot):
 
     @bot.message_handler(state=TeamCodeState.waiting_for_team_code)
     def process_team_join(message: Message, state: StateContext):
-        code_word = message.text
+        print('Full join team text:', message.text)
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        text = message.text
+
+
+        is_admin = check_admin(bot, message, silent=True)
+
+        invite_token = extract_invite_token_from_text(text)
+        print(f'Invite token join team: {invite_token}')
+
+        if invite_token is not None:
+            print(f'invite_token: {invite_token}')
+            team = get_team_by_invite_token(invite_token)
+            
+            if team:
+                join = join_team_via_invite_token(invite_token, user_id)
+                if not join:
+                    bot.reply_to(message, QuestMessages.TEAM_NOT_FOUND)
+
+                bot.send_message(
+                    chat_id,
+                    QuestMessages.JOINED_TO_TEAM.format(
+                        team_name=join.team_name
+                    ),
+                    reply_markup=render_main_menu(is_admin, is_in_team=True)
+                )
+
+                state.delete()
+
+                # Отправка первого задания
+                current_chain = preprocess_task(message)
+                if not current_chain:
+                    return
+                send_task(message.chat.id, current_chain.task)
+                
+                return
+            else:
+                bot.reply_to(message, QuestMessages.TEAM_NOT_FOUND)
+                # print('invite token team not found')
+                
+            
+
+        code_word = text.strip()
         team = get_team_by_code(code_word)
         if not team:
             bot.reply_to(
                 message, 
                 QuestMessages.TEAM_NOT_FOUND, 
-                reply_markup = render_main_menu(
-                    is_admin=check_admin(bot, message, silent=True),
-                    is_in_team=True
-                )
+                reply_markup = render_cancel_button()
             )
+            return
 
-        else:
-            join_team_via_code(code_word, user_id=message.from_user.id)
-            bot.reply_to(
-                message, team.welcome_message, 
-                reply_markup = render_main_menu(
-                    is_admin=check_admin(bot, message, silent=True),
-                    is_in_team=True
-                )
+
+        
+        state.delete()
+        join_team_via_code(code_word, user_id=message.from_user.id)
+        bot.reply_to(
+            message, team.welcome_message, 
+            reply_markup = render_main_menu(
+                is_admin=check_admin(bot, message, silent=True),
+                is_in_team=True
             )
-            state.delete()
+        )
+        # Отправка первого задания
+        current_chain = preprocess_task(message)
+        if not current_chain:
+            return
+        send_task(message.chat.id, current_chain.task)
+        return
 
 
-            # Отправка первого задания
-            current_chain = preprocess_task(message)
-            if not current_chain:
-                return
-            send_task(message.chat.id, current_chain.task)
+        
 
     def preprocess_task(message: Message):
         member = get_member(message.from_user.id)
+        if not member:  
+            return None
+        
         team = get_team_by_id(member.team_id)
+        if not team:  
+            return None
 
         current_chain = get_current_chain(team.id, team.current_chain_order)
         if current_chain:
@@ -90,7 +192,7 @@ def register_quest_commands(bot: TeleBot):
                 task_assist_message = QuestMessages.CURRENT_TASK_MESSAGE
             bot.send_message(message.chat.id, task_assist_message)
         else:
-            print('current chain is false')
+            # print('current chain is false')
             bot.send_message(message.chat.id, QuestMessages.NO_ACTIVE_TASKS, reply_markup = render_main_menu(check_admin(bot, message, silent=True), is_in_team=True))
         return current_chain
     
@@ -140,7 +242,7 @@ def register_quest_commands(bot: TeleBot):
 
 
         if not current_chain:
-            print('not_current_chain')
+            # print('not_current_chain')
             bot.reply_to(message, QuestMessages.NO_ACTIVE_TASKS, )
             return
         
@@ -207,7 +309,7 @@ def register_quest_commands(bot: TeleBot):
                         reply_markup=render_main_menu(check_admin(bot, message, silent=True), is_in_team=True)
                     )
                 except Exception as e:
-                    print(f"Не удалось отправить финальное сообщение пользователю {user_id}: {e}")    
+                    print(f'Error: {e}')   
             return True
             
         task = next_chain.task
@@ -224,5 +326,5 @@ def register_quest_commands(bot: TeleBot):
                     bot.send_message(user_id, QuestMessages.TEAM_ADVANCED_MESSAGE)
                     send_task(user_id, task)
             except Exception as e:
-                print(f"Не удалось отправить задание пользователю {user_id}: {e}")
+                print(f"Error: {e}")
         return True

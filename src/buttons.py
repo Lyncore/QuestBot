@@ -36,10 +36,12 @@ def render_main_menu(is_admin: bool = False, is_in_team: bool = False):
             markup.add(
                 ButtonMessages.JOIN_TEAM
             )
-            
+        else:
+            markup.add(
+               ButtonMessages.CURRENT_TASK,
+            ButtonMessages.NEXT_TASK, 
+            )    
         markup.add(
-            ButtonMessages.CURRENT_TASK,
-            ButtonMessages.NEXT_TASK,
             ButtonMessages.HELP
         )
     return markup

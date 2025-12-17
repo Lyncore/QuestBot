@@ -508,7 +508,7 @@ def register_team_edit_commands(bot: TeleBot):
         bot.send_message(
             chat_id,
             CommonMessages.CANCEL_EDIT,
-            reply_markup=render_main_menu(is_admin=True)
+            reply_markup=render_main_menu(check_admin(bot, message, silent=True))
         )
 
         state.delete()
